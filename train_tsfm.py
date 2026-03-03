@@ -1,4 +1,6 @@
 import argparse
+import multiprocessing
+import os
 import random
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -9,7 +11,9 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+from torch.cuda.amp import GradScaler, autocast
 from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
 try:
     import polars as pl
@@ -496,7 +500,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stride", type=int, default=16)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=-1,
+        help="DataLoader workers. -1 = auto (all CPU cores).",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-steps-per-epoch", type=int, default=0)
     parser.add_argument(
@@ -520,14 +529,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--feature-workers",
         type=int,
-        default=4,
-        help="Number of worker threads for feature-fallback CSV processing.",
+        default=-1,
+        help="Worker threads for feature-fallback CSV processing. -1 = auto (all CPU cores).",
     )
     parser.add_argument(
         "--max-rows-per-feature-file",
         type=int,
         default=0,
         help="Maximum rows to synthesize per *_features.csv file. 0 means use all rows.",
+    )
+    parser.add_argument(
+        "--gradient-accumulation-steps",
+        type=int,
+        default=4,
+        help="Number of gradient accumulation steps for larger effective batch size.",
+    )
+    parser.add_argument(
+        "--no-amp",
+        action="store_true",
+        default=False,
+        help="Disable automatic mixed precision training.",
+    )
+    parser.add_argument(
+        "--no-compile",
+        action="store_true",
+        default=False,
+        help="Disable torch.compile (PyTorch 2.0+) model optimization.",
     )
     return parser.parse_args()
 
@@ -544,8 +571,28 @@ def main() -> None:
     if not (0.0 < args.mask_ratio < 1.0):
         raise ValueError("mask_ratio must be between 0 and 1")
 
+    # --- Auto-detect optimal resource counts ---
+    cpu_count = os.cpu_count() or 4
+    if args.num_workers < 0:
+        args.num_workers = cpu_count
+    if args.feature_workers < 0:
+        args.feature_workers = cpu_count
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    use_amp = (not args.no_amp) and device.type == "cuda"
+
+    # --- CUDA optimizations ---
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        print(f"GPU: {torch.cuda.get_device_name(0)}")
+        print(f"GPU memory: {torch.cuda.get_device_properties(0).total_mem / 1024**3:.1f} GB")
+
     print(f"Device: {device}")
+    print(f"CPU cores: {cpu_count} | DataLoader workers: {args.num_workers} | Feature workers: {args.feature_workers}")
+    print(f"Mixed precision (AMP): {use_amp}")
+    print(f"Gradient accumulation steps: {args.gradient_accumulation_steps}")
     print(f"Loading datasets from: {args.data_dir}")
 
     series_list, loaded_files, source_mode = load_all_series(
@@ -564,13 +611,17 @@ def main() -> None:
     print("[INFO] Building sliding-window dataset...")
     dataset = WindowDataset(series_list, context_length=args.context_length, stride=args.stride)
     print("[INFO] DataLoader initialization...")
-    dataloader = DataLoader(
-        dataset,
+    dl_kwargs = dict(
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
         drop_last=True,
+        pin_memory=(device.type == "cuda"),
     )
+    if args.num_workers > 0:
+        dl_kwargs["persistent_workers"] = True
+        dl_kwargs["prefetch_factor"] = 4
+    dataloader = DataLoader(dataset, **dl_kwargs)
 
     model = TSFMPretrain(
         context_length=args.context_length,
@@ -581,40 +632,96 @@ def main() -> None:
         dropout=args.dropout,
     ).to(device)
 
+    # --- torch.compile for graph optimization (PyTorch 2.0+) ---
+    if not args.no_compile and hasattr(torch, "compile"):
+        try:
+            model = torch.compile(model)
+            print("[INFO] torch.compile enabled")
+        except Exception as exc:
+            print(f"[WARN] torch.compile failed, continuing without: {exc}")
+
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    scaler = GradScaler(enabled=use_amp)
     criterion = nn.MSELoss()
 
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Model parameters: {total_params:,}")
     print(f"Total windows: {len(dataset)}")
+    print(f"Effective batch size: {args.batch_size * args.gradient_accumulation_steps}")
     print("Starting masked pretraining...")
+
+    accum_steps = max(1, args.gradient_accumulation_steps)
+
+    total_batches = len(dataloader)
 
     for epoch in range(1, args.epochs + 1):
         model.train()
         running_loss = 0.0
         step_count = 0
+        micro_step = 0
 
-        for batch in dataloader:
+        max_steps = total_batches
+        if args.max_steps_per_epoch > 0:
+            max_steps = min(args.max_steps_per_epoch, total_batches)
+
+        pbar = tqdm(
+            dataloader,
+            total=max_steps,
+            desc=f"Epoch {epoch}/{args.epochs}",
+            unit="batch",
+            dynamic_ncols=True,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}",
+            colour="green",
+        )
+
+        for batch in pbar:
             if args.max_steps_per_epoch > 0 and step_count >= args.max_steps_per_epoch:
                 break
 
-            batch = batch.to(device)
-            optimizer.zero_grad(set_to_none=True)
+            batch = batch.to(device, non_blocking=True)
 
-            reconstructed, original, mask = model(batch, mask_ratio=args.mask_ratio)
-            if not mask.any():
-                continue
+            with autocast(enabled=use_amp):
+                reconstructed, original, mask = model(batch, mask_ratio=args.mask_ratio)
+                if not mask.any():
+                    continue
 
-            preds = reconstructed[mask]
-            targets = original[mask].detach()
-            loss = criterion(preds, targets)
+                preds = reconstructed[mask]
+                targets = original[mask].detach()
+                loss = criterion(preds, targets) / accum_steps
 
-            loss.backward()
-            optimizer.step()
+            scaler.scale(loss).backward()
+            micro_step += 1
 
-            running_loss += loss.item()
+            if micro_step % accum_steps == 0:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+
+            running_loss += loss.item() * accum_steps
             step_count += 1
 
+            # --- Update progress bar with live stats ---
+            avg_loss = running_loss / step_count
+            postfix = {"loss": f"{avg_loss:.4f}", "lr": f"{optimizer.param_groups[0]['lr']:.2e}"}
+            if device.type == "cuda":
+                gpu_mb = torch.cuda.memory_allocated() / 1024**2
+                postfix["gpu_mem"] = f"{gpu_mb:.0f}MB"
+            pbar.set_postfix(postfix)
+
+        pbar.close()
+
+        # Flush remaining accumulated gradients
+        if micro_step % accum_steps != 0:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
+
         avg_loss = running_loss / max(step_count, 1)
-        print(f"Epoch {epoch}/{args.epochs} | Steps {step_count} | Masked MSE {avg_loss:.6f}")
+        print(f"\nEpoch {epoch}/{args.epochs} | Steps {step_count} | Masked MSE {avg_loss:.6f}")
 
     ckpt_path = Path("tsfm_pretrain.pt")
     torch.save({"model_state_dict": model.state_dict(), "args": vars(args)}, ckpt_path)

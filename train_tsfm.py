@@ -1,9 +1,12 @@
 import argparse
+import json
 import multiprocessing
 import os
 import random
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 from typing import List, Sequence, Tuple
 
@@ -485,6 +488,24 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
+def _as_jsonable(value):
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _as_jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_as_jsonable(v) for v in value]
+    if isinstance(value, (np.integer, np.floating)):
+        return value.item()
+    return value
+
+
+def _write_metrics(metrics_out: Path, payload: dict) -> None:
+    metrics_out.parent.mkdir(parents=True, exist_ok=True)
+    with metrics_out.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Pretrain a simple TSFM with masked patch reconstruction.")
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
@@ -556,6 +577,30 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Disable torch.compile (PyTorch 2.0+) model optimization.",
     )
+    parser.add_argument(
+        "--save-checkpoint",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Save a checkpoint at the end of training.",
+    )
+    parser.add_argument(
+        "--checkpoint-out",
+        type=Path,
+        default=Path("tsfm_pretrain.pt"),
+        help="Output checkpoint path.",
+    )
+    parser.add_argument(
+        "--metrics-out",
+        type=Path,
+        default=None,
+        help="Optional path to write structured run metrics as JSON.",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default="",
+        help="Optional run name stored in metrics output.",
+    )
     return parser.parse_args()
 
 
@@ -567,6 +612,8 @@ def main() -> None:
 
     args = parse_args()
     set_seed(args.seed)
+    started_at = datetime.now().isoformat(timespec="seconds")
+    train_start_perf = time.perf_counter()
 
     if not (0.0 < args.mask_ratio < 1.0):
         raise ValueError("mask_ratio must be between 0 and 1")
@@ -650,12 +697,39 @@ def main() -> None:
     print(f"Effective batch size: {args.batch_size * args.gradient_accumulation_steps}")
     print("Starting masked pretraining...")
 
+    run_name = args.run_name.strip() or f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    metrics_payload = {
+        "run_name": run_name,
+        "started_at": started_at,
+        "finished_at": None,
+        "config": _as_jsonable(vars(args)),
+        "system": {
+            "device": str(device),
+            "cpu_count": cpu_count,
+            "use_amp": bool(use_amp),
+        },
+        "data": {
+            "source_mode": source_mode,
+            "loaded_files": len(loaded_files),
+            "loaded_series": len(series_list),
+            "total_windows": len(dataset),
+        },
+        "model": {
+            "total_params": int(total_params),
+        },
+        "epochs": [],
+        "summary": {},
+    }
+    if args.metrics_out is not None:
+        _write_metrics(args.metrics_out, metrics_payload)
+
     accum_steps = max(1, args.gradient_accumulation_steps)
 
     total_batches = len(dataloader)
 
     for epoch in range(1, args.epochs + 1):
         model.train()
+        epoch_start_perf = time.perf_counter()
         running_loss = 0.0
         step_count = 0
         micro_step = 0
@@ -721,11 +795,43 @@ def main() -> None:
             optimizer.zero_grad(set_to_none=True)
 
         avg_loss = running_loss / max(step_count, 1)
+        epoch_time_sec = time.perf_counter() - epoch_start_perf
+        metrics_payload["epochs"].append(
+            {
+                "epoch": epoch,
+                "steps": int(step_count),
+                "masked_mse": float(avg_loss),
+                "epoch_time_sec": float(epoch_time_sec),
+            }
+        )
+        if args.metrics_out is not None:
+            _write_metrics(args.metrics_out, metrics_payload)
         print(f"\nEpoch {epoch}/{args.epochs} | Steps {step_count} | Masked MSE {avg_loss:.6f}")
 
-    ckpt_path = Path("tsfm_pretrain.pt")
-    torch.save({"model_state_dict": model.state_dict(), "args": vars(args)}, ckpt_path)
-    print(f"Saved checkpoint: {ckpt_path.resolve()}")
+    checkpoint_path = None
+    if args.save_checkpoint:
+        checkpoint_path = args.checkpoint_out
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save({"model_state_dict": model.state_dict(), "args": vars(args)}, checkpoint_path)
+        print(f"Saved checkpoint: {checkpoint_path.resolve()}")
+
+    elapsed_sec = time.perf_counter() - train_start_perf
+    best_loss = None
+    final_loss = None
+    if metrics_payload["epochs"]:
+        losses = [ep["masked_mse"] for ep in metrics_payload["epochs"]]
+        best_loss = min(losses)
+        final_loss = losses[-1]
+
+    metrics_payload["finished_at"] = datetime.now().isoformat(timespec="seconds")
+    metrics_payload["summary"] = {
+        "total_train_time_sec": float(elapsed_sec),
+        "best_masked_mse": best_loss,
+        "final_masked_mse": final_loss,
+        "checkpoint_path": str(checkpoint_path) if checkpoint_path is not None else None,
+    }
+    if args.metrics_out is not None:
+        _write_metrics(args.metrics_out, metrics_payload)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,275 @@
+C:\Users\vishn\AppData\Roaming\Python\Python312\site-packages\torch\utils\_pytree.py:185: FutureWarning: optree is installed but the version is too old to support PyTorch Dynamo in C++ pytree. C++ pytree support is disabled. Please consider upgrading optree using `python3 -m pip install --upgrade 'optree>=0.13.0'`.
+  warnings.warn(
+Device: cpu
+CPU cores: 16 | DataLoader workers: 0 | Feature workers: 1
+Mixed precision (AMP): False
+Gradient accumulation steps: 4
+Loading datasets from: data
+[INFO] Found raw files: tsf=0 ts=0
+[INFO] Feature fallback enabled. Found feature CSV files: 44
+[INFO] Feature CSV backend: polars
+[INFO] Feature fallback workers: 1
+[INFO] Processing feature file 1/44: data\Monash-Features-for-TSFM\Features\tsfeatures\aus_elecdemand_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\aus_elecdemand_features.csv | rows=5
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\aus_elecdemand_features.csv | synthesized_series=5
+[INFO] Added 5 synthetic series from aus_elecdemand_features.csv | total_series=5
+[INFO] Processing feature file 2/44: data\Monash-Features-for-TSFM\Features\tsfeatures\bitcoin_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\bitcoin_features.csv | rows=18
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\bitcoin_features.csv | synthesized_series=18
+[INFO] Added 18 synthetic series from bitcoin_features.csv | total_series=23
+[INFO] Processing feature file 3/44: data\Monash-Features-for-TSFM\Features\tsfeatures\car_parts_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\car_parts_features.csv | rows=2674
+[INFO] car_parts_features.csv: sampled 50/2674 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\car_parts_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from car_parts_features.csv | total_series=73
+[INFO] Processing feature file 4/44: data\Monash-Features-for-TSFM\Features\tsfeatures\cif_2016_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\cif_2016_features.csv | rows=72
+[INFO] cif_2016_features.csv: sampled 50/72 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\cif_2016_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from cif_2016_features.csv | total_series=123
+[INFO] Processing feature file 5/44: data\Monash-Features-for-TSFM\Features\tsfeatures\covid_deaths_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\covid_deaths_features.csv | rows=266
+[INFO] covid_deaths_features.csv: sampled 50/266 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\covid_deaths_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from covid_deaths_features.csv | total_series=173
+[INFO] Processing feature file 6/44: data\Monash-Features-for-TSFM\Features\tsfeatures\dominick_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\dominick_features.csv | rows=115704
+[INFO] dominick_features.csv: sampled 50/115704 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\dominick_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from dominick_features.csv | total_series=223
+[INFO] Processing feature file 7/44: data\Monash-Features-for-TSFM\Features\tsfeatures\elecdemand_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\elecdemand_features.csv | rows=1
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\elecdemand_features.csv | synthesized_series=1
+[INFO] Added 1 synthetic series from elecdemand_features.csv | total_series=224
+[INFO] Processing feature file 8/44: data\Monash-Features-for-TSFM\Features\tsfeatures\electricity_hourly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\electricity_hourly_features.csv | rows=321
+[INFO] electricity_hourly_features.csv: sampled 50/321 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\electricity_hourly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from electricity_hourly_features.csv | total_series=274
+[INFO] Processing feature file 9/44: data\Monash-Features-for-TSFM\Features\tsfeatures\electricity_weekly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\electricity_weekly_features.csv | rows=321
+[INFO] electricity_weekly_features.csv: sampled 50/321 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\electricity_weekly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from electricity_weekly_features.csv | total_series=324
+[INFO] Processing feature file 10/44: data\Monash-Features-for-TSFM\Features\tsfeatures\fred_md_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\fred_md_features.csv | rows=107
+[INFO] fred_md_features.csv: sampled 50/107 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\fred_md_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from fred_md_features.csv | total_series=374
+[INFO] Processing feature file 11/44: data\Monash-Features-for-TSFM\Features\tsfeatures\hospital_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\hospital_features.csv | rows=767
+[INFO] hospital_features.csv: sampled 50/767 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\hospital_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from hospital_features.csv | total_series=424
+[INFO] Processing feature file 12/44: data\Monash-Features-for-TSFM\Features\tsfeatures\kaggle_web_traffic_daily_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\kaggle_web_traffic_daily_features.csv | rows=145063
+[INFO] kaggle_web_traffic_daily_features.csv: sampled 50/145063 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\kaggle_web_traffic_daily_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from kaggle_web_traffic_daily_features.csv | total_series=474
+[INFO] Processing feature file 13/44: data\Monash-Features-for-TSFM\Features\tsfeatures\kaggle_web_traffic_weekly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\kaggle_web_traffic_weekly_features.csv | rows=145063
+[INFO] kaggle_web_traffic_weekly_features.csv: sampled 50/145063 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\kaggle_web_traffic_weekly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from kaggle_web_traffic_weekly_features.csv | total_series=524
+[INFO] Processing feature file 14/44: data\Monash-Features-for-TSFM\Features\tsfeatures\kdd_cup_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\kdd_cup_features.csv | rows=270
+[INFO] kdd_cup_features.csv: sampled 50/270 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\kdd_cup_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from kdd_cup_features.csv | total_series=574
+[INFO] Processing feature file 15/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m1_monthly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m1_monthly_features.csv | rows=617
+[INFO] m1_monthly_features.csv: sampled 50/617 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m1_monthly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m1_monthly_features.csv | total_series=624
+[INFO] Processing feature file 16/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m1_quarterly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m1_quarterly_features.csv | rows=203
+[INFO] m1_quarterly_features.csv: sampled 50/203 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m1_quarterly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m1_quarterly_features.csv | total_series=674
+[INFO] Processing feature file 17/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m1_yearly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m1_yearly_features.csv | rows=181
+[INFO] m1_yearly_features.csv: sampled 50/181 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m1_yearly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m1_yearly_features.csv | total_series=724
+[INFO] Processing feature file 18/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m3_monthly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m3_monthly_features.csv | rows=1428
+[INFO] m3_monthly_features.csv: sampled 50/1428 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m3_monthly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m3_monthly_features.csv | total_series=774
+[INFO] Processing feature file 19/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m3_other_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m3_other_features.csv | rows=174
+[INFO] m3_other_features.csv: sampled 50/174 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m3_other_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m3_other_features.csv | total_series=824
+[INFO] Processing feature file 20/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m3_quarterly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m3_quarterly_features.csv | rows=756
+[INFO] m3_quarterly_features.csv: sampled 50/756 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m3_quarterly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m3_quarterly_features.csv | total_series=874
+[INFO] Processing feature file 21/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m3_yearly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m3_yearly_features.csv | rows=645
+[INFO] m3_yearly_features.csv: sampled 50/645 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m3_yearly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m3_yearly_features.csv | total_series=924
+[INFO] Processing feature file 22/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m4_daily_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m4_daily_features.csv | rows=4227
+[INFO] m4_daily_features.csv: sampled 50/4227 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m4_daily_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m4_daily_features.csv | total_series=974
+[INFO] Processing feature file 23/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m4_hourly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m4_hourly_features.csv | rows=414
+[INFO] m4_hourly_features.csv: sampled 50/414 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m4_hourly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m4_hourly_features.csv | total_series=1024
+[INFO] Processing feature file 24/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m4_monthly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m4_monthly_features.csv | rows=48000
+[INFO] m4_monthly_features.csv: sampled 50/48000 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m4_monthly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m4_monthly_features.csv | total_series=1074
+[INFO] Processing feature file 25/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m4_quarterly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m4_quarterly_features.csv | rows=24000
+[INFO] m4_quarterly_features.csv: sampled 50/24000 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m4_quarterly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m4_quarterly_features.csv | total_series=1124
+[INFO] Processing feature file 26/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m4_weekly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m4_weekly_features.csv | rows=359
+[INFO] m4_weekly_features.csv: sampled 50/359 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m4_weekly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m4_weekly_features.csv | total_series=1174
+[INFO] Processing feature file 27/44: data\Monash-Features-for-TSFM\Features\tsfeatures\m4_yearly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\m4_yearly_features.csv | rows=23000
+[INFO] m4_yearly_features.csv: sampled 50/23000 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\m4_yearly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from m4_yearly_features.csv | total_series=1224
+[INFO] Processing feature file 28/44: data\Monash-Features-for-TSFM\Features\tsfeatures\melbourne_pedestrian_counts_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\melbourne_pedestrian_counts_features.csv | rows=66
+[INFO] melbourne_pedestrian_counts_features.csv: sampled 50/66 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\melbourne_pedestrian_counts_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from melbourne_pedestrian_counts_features.csv | total_series=1274
+[INFO] Processing feature file 29/44: data\Monash-Features-for-TSFM\Features\tsfeatures\nn5_daily_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\nn5_daily_features.csv | rows=111
+[INFO] nn5_daily_features.csv: sampled 50/111 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\nn5_daily_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from nn5_daily_features.csv | total_series=1324
+[INFO] Processing feature file 30/44: data\Monash-Features-for-TSFM\Features\tsfeatures\nn5_weekly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\nn5_weekly_features.csv | rows=111
+[INFO] nn5_weekly_features.csv: sampled 50/111 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\nn5_weekly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from nn5_weekly_features.csv | total_series=1374
+[INFO] Processing feature file 31/44: data\Monash-Features-for-TSFM\Features\tsfeatures\rideshare_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\rideshare_features.csv | rows=2304
+[INFO] rideshare_features.csv: sampled 50/2304 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\rideshare_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from rideshare_features.csv | total_series=1424
+[INFO] Processing feature file 32/44: data\Monash-Features-for-TSFM\Features\tsfeatures\saugeen_river_flow_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\saugeen_river_flow_features.csv | rows=1
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\saugeen_river_flow_features.csv | synthesized_series=1
+[INFO] Added 1 synthetic series from saugeen_river_flow_features.csv | total_series=1425
+[INFO] Processing feature file 33/44: data\Monash-Features-for-TSFM\Features\tsfeatures\solar_10_minutes_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\solar_10_minutes_features.csv | rows=137
+[INFO] solar_10_minutes_features.csv: sampled 50/137 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\solar_10_minutes_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from solar_10_minutes_features.csv | total_series=1475
+[INFO] Processing feature file 34/44: data\Monash-Features-for-TSFM\Features\tsfeatures\solar_weekly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\solar_weekly_features.csv | rows=137
+[INFO] solar_weekly_features.csv: sampled 50/137 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\solar_weekly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from solar_weekly_features.csv | total_series=1525
+[INFO] Processing feature file 35/44: data\Monash-Features-for-TSFM\Features\tsfeatures\sunspot_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\sunspot_features.csv | rows=1
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\sunspot_features.csv | synthesized_series=1
+[INFO] Added 1 synthetic series from sunspot_features.csv | total_series=1526
+[INFO] Processing feature file 36/44: data\Monash-Features-for-TSFM\Features\tsfeatures\temperature_rain_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\temperature_rain_features.csv | rows=32072
+[INFO] temperature_rain_features.csv: sampled 50/32072 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\temperature_rain_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from temperature_rain_features.csv | total_series=1576
+[INFO] Processing feature file 37/44: data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_monthly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_monthly_features.csv | rows=366
+[INFO] tourism_monthly_features.csv: sampled 50/366 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_monthly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from tourism_monthly_features.csv | total_series=1626
+[INFO] Processing feature file 38/44: data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_quarterly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_quarterly_features.csv | rows=427
+[INFO] tourism_quarterly_features.csv: sampled 50/427 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_quarterly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from tourism_quarterly_features.csv | total_series=1676
+[INFO] Processing feature file 39/44: data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_yearly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_yearly_features.csv | rows=518
+[INFO] tourism_yearly_features.csv: sampled 50/518 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\tourism_yearly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from tourism_yearly_features.csv | total_series=1726
+[INFO] Processing feature file 40/44: data\Monash-Features-for-TSFM\Features\tsfeatures\traffic_hourly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\traffic_hourly_features.csv | rows=862
+[INFO] traffic_hourly_features.csv: sampled 50/862 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\traffic_hourly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from traffic_hourly_features.csv | total_series=1776
+[INFO] Processing feature file 41/44: data\Monash-Features-for-TSFM\Features\tsfeatures\traffic_weekly_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\traffic_weekly_features.csv | rows=862
+[INFO] traffic_weekly_features.csv: sampled 50/862 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\traffic_weekly_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from traffic_weekly_features.csv | total_series=1826
+[INFO] Processing feature file 42/44: data\Monash-Features-for-TSFM\Features\tsfeatures\us_births_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\us_births_features.csv | rows=1
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\us_births_features.csv | synthesized_series=1
+[INFO] Added 1 synthetic series from us_births_features.csv | total_series=1827
+[INFO] Processing feature file 43/44: data\Monash-Features-for-TSFM\Features\tsfeatures\vehicle_trips_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\vehicle_trips_features.csv | rows=329
+[INFO] vehicle_trips_features.csv: sampled 50/329 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\vehicle_trips_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from vehicle_trips_features.csv | total_series=1877
+[INFO] Processing feature file 44/44: data\Monash-Features-for-TSFM\Features\tsfeatures\weather_features.csv
+[INFO] Synthesizing from data\Monash-Features-for-TSFM\Features\tsfeatures\weather_features.csv | rows=3010
+[INFO] weather_features.csv: sampled 50/3010 rows (max_rows_per_feature_file=50)
+[INFO] Completed data\Monash-Features-for-TSFM\Features\tsfeatures\weather_features.csv | synthesized_series=50
+[INFO] Added 50 synthetic series from weather_features.csv | total_series=1927
+Data source mode: feature-fallback
+Loaded files: 44
+Loaded series: 1927
+[INFO] Building sliding-window dataset...
+[INFO] DataLoader initialization...
+C:\Users\vishn\AppData\Roaming\Python\Python312\site-packages\torch\nn\modules\transformer.py:385: UserWarning: enable_nested_tensor is True, but self.use_nested_tensor is False because encoder_layer.norm_first was True
+  warnings.warn(
+C:\Users\vishn\Desktop\Programs\TSFM\train_tsfm.py:691: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
+  scaler = GradScaler(enabled=use_amp)
+Model parameters: 832,514
+Total windows: 63591
+Effective batch size: 128
+Starting masked pretraining...
+
+Epoch 1/1:   0%|          | 0/20 [00:00<?, ?batch/s] C:\Users\vishn\Desktop\Programs\TSFM\train_tsfm.py:757: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=use_amp):
+
+Epoch 1/1:   0%|          | 0/20 [00:00<?, ?batch/s] , loss=0.4527, lr=1.00e-04
+Epoch 1/1:   5%|5         | 1/20 [00:00<00:02,  7.07batch/s] , loss=0.4527, lr=1.00e-04
+Epoch 1/1:   5%|5         | 1/20 [00:00<00:02,  7.07batch/s] , loss=0.4467, lr=1.00e-04
+Epoch 1/1:   5%|5         | 1/20 [00:00<00:02,  7.07batch/s] , loss=0.4414, lr=1.00e-04
+Epoch 1/1:  15%|#5        | 3/20 [00:00<00:01, 10.34batch/s] , loss=0.4414, lr=1.00e-04
+Epoch 1/1:  15%|#5        | 3/20 [00:00<00:01, 10.34batch/s] , loss=0.4365, lr=1.00e-04
+Epoch 1/1:  15%|#5        | 3/20 [00:00<00:01, 10.34batch/s] , loss=0.4327, lr=1.00e-04
+Epoch 1/1:  25%|##5       | 5/20 [00:00<00:01, 10.35batch/s] , loss=0.4327, lr=1.00e-04
+Epoch 1/1:  25%|##5       | 5/20 [00:00<00:01, 10.35batch/s] , loss=0.4305, lr=1.00e-04
+Epoch 1/1:  25%|##5       | 5/20 [00:00<00:01, 10.35batch/s] , loss=0.4290, lr=1.00e-04
+Epoch 1/1:  35%|###5      | 7/20 [00:00<00:01, 11.46batch/s] , loss=0.4290, lr=1.00e-04
+Epoch 1/1:  35%|###5      | 7/20 [00:00<00:01, 11.46batch/s] , loss=0.4271, lr=1.00e-04
+Epoch 1/1:  35%|###5      | 7/20 [00:00<00:01, 11.46batch/s] , loss=0.4238, lr=1.00e-04
+Epoch 1/1:  45%|####5     | 9/20 [00:00<00:00, 12.44batch/s] , loss=0.4238, lr=1.00e-04
+Epoch 1/1:  45%|####5     | 9/20 [00:00<00:00, 12.44batch/s] , loss=0.4195, lr=1.00e-04
+Epoch 1/1:  45%|####5     | 9/20 [00:00<00:00, 12.44batch/s] , loss=0.4160, lr=1.00e-04
+Epoch 1/1:  55%|#####5    | 11/20 [00:00<00:00, 13.03batch/s] , loss=0.4160, lr=1.00e-04
+Epoch 1/1:  55%|#####5    | 11/20 [00:01<00:00, 13.03batch/s] , loss=0.4117, lr=1.00e-04
+Epoch 1/1:  55%|#####5    | 11/20 [00:01<00:00, 13.03batch/s] , loss=0.4105, lr=1.00e-04
+Epoch 1/1:  65%|######5   | 13/20 [00:01<00:00, 12.85batch/s] , loss=0.4105, lr=1.00e-04
+Epoch 1/1:  65%|######5   | 13/20 [00:01<00:00, 12.85batch/s] , loss=0.4092, lr=1.00e-04
+Epoch 1/1:  65%|######5   | 13/20 [00:01<00:00, 12.85batch/s] , loss=0.4084, lr=1.00e-04
+Epoch 1/1:  75%|#######5  | 15/20 [00:01<00:00, 12.72batch/s] , loss=0.4084, lr=1.00e-04
+Epoch 1/1:  75%|#######5  | 15/20 [00:01<00:00, 12.72batch/s] , loss=0.4061, lr=1.00e-04
+Epoch 1/1:  75%|#######5  | 15/20 [00:01<00:00, 12.72batch/s] , loss=0.4043, lr=1.00e-04
+Epoch 1/1:  85%|########5 | 17/20 [00:01<00:00, 12.76batch/s] , loss=0.4043, lr=1.00e-04
+Epoch 1/1:  85%|########5 | 17/20 [00:01<00:00, 12.76batch/s] , loss=0.4028, lr=1.00e-04
+Epoch 1/1:  85%|########5 | 17/20 [00:01<00:00, 12.76batch/s] , loss=0.4024, lr=1.00e-04
+Epoch 1/1:  95%|#########5| 19/20 [00:01<00:00, 13.33batch/s] , loss=0.4024, lr=1.00e-04
+Epoch 1/1:  95%|#########5| 19/20 [00:01<00:00, 13.33batch/s] , loss=0.4025, lr=1.00e-04
+Epoch 1/1: 100%|##########| 20/20 [00:01<00:00, 12.41batch/s] , loss=0.4025, lr=1.00e-04
+
+Epoch 1/1 | Steps 20 | Masked MSE 0.402454

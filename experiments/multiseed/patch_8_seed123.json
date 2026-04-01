@@ -1,0 +1,57 @@
+{
+  "run_name": "ms_patch_8_s123",
+  "started_at": "2026-03-30T12:28:19",
+  "finished_at": "2026-03-30T12:28:21",
+  "config": {
+    "seed": 123,
+    "data_seed": 123,
+    "epochs": 1,
+    "max_steps_per_epoch": 20,
+    "batch_size": 32,
+    "context_length": 512,
+    "stride": 16,
+    "embed_dim": 128,
+    "num_heads": 8,
+    "num_layers": 4,
+    "dropout": 0.1,
+    "lr": 0.0001,
+    "weight_decay": 0.0001,
+    "gradient_accumulation_steps": 4,
+    "num_workers": 0,
+    "feature_fallback": true,
+    "synthetic_length": 1024,
+    "progress_every_rows": 0,
+    "feature_workers": 1,
+    "max_rows_per_feature_file": 50,
+    "mask_ratio": 0.4,
+    "patch_length": 8
+  },
+  "system": {
+    "device": "cpu",
+    "cpu_count": 16,
+    "use_amp": false
+  },
+  "data": {
+    "source_mode": "feature-fallback",
+    "loaded_files": 44,
+    "loaded_series": 1927,
+    "total_windows": 63591
+  },
+  "model": {
+    "total_params": 835586
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "steps": 20,
+      "masked_mse": 0.4374350354075432,
+      "epoch_time_sec": 2.623654400000305
+    }
+  ],
+  "summary": {
+    "total_train_time_sec": 2.624258700001519,
+    "best_masked_mse": 0.4374350354075432,
+    "final_masked_mse": 0.4374350354075432,
+    "checkpoint_path": null
+  }
+}

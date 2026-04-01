@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
@@ -114,12 +114,14 @@ class TSFMPretrain(nn.Module):
             nn.Linear(embed_dim, embed_dim),
         )
 
-    def _apply_mask(self, embedded_patches: torch.Tensor, mask_ratio: float) -> Tuple[torch.Tensor, torch.Tensor]:
-        batch_size, num_patches, _ = embedded_patches.shape
+    def _apply_mask(self, embedded_patches: torch.Tensor, mask_ratio: float):
+        batch_size, num_patches, embed_dim = embedded_patches.shape
+
         rand = torch.rand(batch_size, num_patches, device=embedded_patches.device)
-        mask = rand < mask_ratio
-        masked = embedded_patches.clone()
-        masked[mask] = self.mask_token.expand_as(masked)[mask]
+        mask = rand < mask_ratio  # (B, N)
+        mask_token = self.mask_token.expand(batch_size, num_patches, embed_dim)
+        masked = torch.where(mask.unsqueeze(-1), mask_token, embedded_patches)
+
         return masked, mask
 
     def forward(self, x: torch.Tensor, mask_ratio: float) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -496,10 +498,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--num-heads", type=int, default=8)
     parser.add_argument("--num-layers", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
-    parser.add_argument("--mask-ratio", type=float, default=0.4)
+    parser.add_argument("--mask-ratio", type=float, default=0.5)
     parser.add_argument("--stride", type=int, default=16)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--save-every", type=int, default=5000)
     parser.add_argument(
         "--num-workers",
         type=int,
@@ -556,8 +559,33 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Disable torch.compile (PyTorch 2.0+) model optimization.",
     )
+    parser.add_argument("--resume-from", type=str, default=None, help="Path to a checkpoint .pt file to resume from.")
+    parser.add_argument("--start-epoch", type=int, default=None, help="Manually set the starting epoch when resuming.")
     return parser.parse_args()
 
+def validate(model, val_loader, device):
+        model.eval()
+        total_loss = 0.0
+        count = 0
+
+        with torch.no_grad():
+            for batch in val_loader:
+                batch = batch.to(device)
+
+                reconstructed, original, mask = model(batch, mask_ratio = 0.5)
+
+                if mask.sum() == 0:
+                    continue
+
+                preds = reconstructed[mask]
+                targets = original[mask]
+
+                loss = nn.functional.mse_loss(preds, targets)
+
+                total_loss += loss.item()
+                count += 1
+
+        return total_loss / max(count, 1)
 
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
@@ -587,7 +615,7 @@ def main() -> None:
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
         print(f"GPU: {torch.cuda.get_device_name(0)}")
-        print(f"GPU memory: {torch.cuda.get_device_properties(0).total_mem / 1024**3:.1f} GB")
+        print(f"GPU memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
 
     print(f"Device: {device}")
     print(f"CPU cores: {cpu_count} | DataLoader workers: {args.num_workers} | Feature workers: {args.feature_workers}")
@@ -609,7 +637,16 @@ def main() -> None:
     print(f"Loaded series: {len(series_list)}")
 
     print("[INFO] Building sliding-window dataset...")
+    
+    from torch.utils.data import random_split
+
     dataset = WindowDataset(series_list, context_length=args.context_length, stride=args.stride)
+
+    train_size = int(0.95 * len(dataset))
+    val_size = len(dataset) - train_size
+
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
     print("[INFO] DataLoader initialization...")
     dl_kwargs = dict(
         batch_size=args.batch_size,
@@ -621,7 +658,16 @@ def main() -> None:
     if args.num_workers > 0:
         dl_kwargs["persistent_workers"] = True
         dl_kwargs["prefetch_factor"] = 4
-    dataloader = DataLoader(dataset, **dl_kwargs)
+    
+    train_loader = DataLoader(train_dataset, **dl_kwargs)
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=(device.type == "cuda"),
+    )
 
     model = TSFMPretrain(
         context_length=args.context_length,
@@ -641,8 +687,35 @@ def main() -> None:
             print(f"[WARN] torch.compile failed, continuing without: {exc}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scaler = GradScaler(enabled=use_amp)
+    scaler = GradScaler("cuda", enabled=use_amp)
     criterion = nn.MSELoss()
+
+    import math
+
+    def get_cosine_schedule_with_warmup(optimizer, warmup_steps, total_steps, min_lr_ratio=0.1):
+            
+            def lr_lambda(current_step):
+                if current_step < warmup_steps:
+                    return float(current_step) / float(max(1, warmup_steps))
+
+                progress = float(current_step - warmup_steps) / float(max(1, total_steps - warmup_steps))
+                cosine_decay = 0.5 * (1.0 + math.cos(math.pi * progress))
+
+                return max(min_lr_ratio, cosine_decay)
+
+            return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+
+    steps_per_epoch = args.max_steps_per_epoch if args.max_steps_per_epoch > 0 else len(train_loader)
+    total_steps = args.epochs * steps_per_epoch
+    warmup_steps = int(0.05 * total_steps)
+
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer,
+        warmup_steps=warmup_steps,
+        total_steps=total_steps
+    )
+
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model parameters: {total_params:,}")
@@ -652,9 +725,39 @@ def main() -> None:
 
     accum_steps = max(1, args.gradient_accumulation_steps)
 
-    total_batches = len(dataloader)
+    total_batches = len(train_loader)
+    
+    start_epoch = 1
+    if args.resume_from and os.path.exists(args.resume_from):
+        print(f"[INFO] Loading checkpoint from {args.resume_from}...")
+        checkpoint = torch.load(args.resume_from, map_location=device)
+        
+        # Load states
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        scaler.load_state_dict(checkpoint["scaler"])
+        
+        # NOTE: If changing batch size drastically, the old scheduler step might be mismatched.
+        # We load it, but keep an eye on your learning rate prints.
+        if "scheduler" in checkpoint:
+            scheduler.load_state_dict(checkpoint["scheduler"])
+        
+        # Determine the correct start epoch
+        if args.start_epoch is not None:
+            start_epoch = args.start_epoch
+        elif "epoch" in checkpoint:
+            start_epoch = checkpoint["epoch"] + 1
+        else:
+            # Fallback for your old checkpoints
+            start_epoch = 12 
+            
+        print(f"[INFO] Resuming training from Epoch {start_epoch}")
 
-    for epoch in range(1, args.epochs + 1):
+    # Create a directory for checkpoints
+    checkpoint_dir = Path("checkpoints")
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    for epoch in range(start_epoch, args.epochs + 1):
         model.train()
         running_loss = 0.0
         step_count = 0
@@ -665,7 +768,7 @@ def main() -> None:
             max_steps = min(args.max_steps_per_epoch, total_batches)
 
         pbar = tqdm(
-            dataloader,
+            train_loader,
             total=max_steps,
             desc=f"Epoch {epoch}/{args.epochs}",
             unit="batch",
@@ -680,9 +783,9 @@ def main() -> None:
 
             batch = batch.to(device, non_blocking=True)
 
-            with autocast(enabled=use_amp):
+            with autocast("cuda", enabled=use_amp):
                 reconstructed, original, mask = model(batch, mask_ratio=args.mask_ratio)
-                if not mask.any():
+                if mask.sum() == 0:
                     continue
 
                 preds = reconstructed[mask]
@@ -698,6 +801,7 @@ def main() -> None:
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad(set_to_none=True)
+                scheduler.step()
 
             running_loss += loss.item() * accum_steps
             step_count += 1
@@ -709,6 +813,21 @@ def main() -> None:
                 gpu_mb = torch.cuda.memory_allocated() / 1024**2
                 postfix["gpu_mem"] = f"{gpu_mb:.0f}MB"
             pbar.set_postfix(postfix)
+
+
+            global_step = (epoch - 1) * max_steps + step_count
+
+            if global_step % args.save_every == 0:
+                # Saves inside the 'checkpoints' folder and includes the epoch number
+                ckpt_path = checkpoint_dir / f"checkpoint_epoch_{epoch}_step_{global_step}.pt"
+                torch.save({
+                    "model": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "scaler": scaler.state_dict(),
+                    "scheduler": scheduler.state_dict(),
+                    "step": global_step,
+                    "epoch": epoch, 
+                }, ckpt_path)
 
         pbar.close()
 
@@ -722,11 +841,35 @@ def main() -> None:
 
         avg_loss = running_loss / max(step_count, 1)
         print(f"\nEpoch {epoch}/{args.epochs} | Steps {step_count} | Masked MSE {avg_loss:.6f}")
+        val_loss = validate(model, val_loader, device)
+        print(f"Validation Loss: {val_loss:.6f}")
 
     ckpt_path = Path("tsfm_pretrain.pt")
     torch.save({"model_state_dict": model.state_dict(), "args": vars(args)}, ckpt_path)
     print(f"Saved checkpoint: {ckpt_path.resolve()}")
 
+
+    
+
+class ForecastHead(nn.Module):
+    def __init__(self, embed_dim, pred_len):
+        super().__init__()
+        self.linear = nn.Linear(embed_dim, pred_len)
+
+    def forward(self, x):
+        return self.linear(x[:, -1, :])
+    
+class TSFMForecastModel(nn.Module):
+    def __init__(self, backbone, embed_dim, pred_len):
+        super().__init__()
+        self.backbone = backbone
+        self.head = ForecastHead(embed_dim, pred_len)
+
+    def forward(self, x):
+        embedded = self.backbone.patch_embedding(x.squeeze(-1))
+        encoded = self.backbone.transformer(embedded)
+        return self.head(encoded)
+    
 
 if __name__ == "__main__":
     main()

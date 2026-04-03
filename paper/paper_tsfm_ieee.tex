@@ -2,6 +2,7 @@
 
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{url}
 
 \title{Feature-Bootstrapped Masked TSFM: Theory, Complexity, and Controlled Ablations for Reproducible Time-Series Pretraining}
@@ -13,7 +14,7 @@
 \maketitle
 
 \begin{abstract}
-This paper presents a reproducible time-series pretraining pipeline and studies it at four levels: formal objective design, computational complexity, deterministic single-seed behavior, and multi-seed statistical behavior. The implementation trains a masked patch reconstruction model with RevIN, convolutional patch tokenization, a Transformer encoder backbone, and an MLP reconstruction head. The data loader supports two regimes: direct loading from raw \texttt{.tsf}/\texttt{.ts} files and feature-bootstrap synthesis from \texttt{*\_features.csv} files. In the present repository state, training uses 44 feature tables and no raw TSF/TS files. We formalize the training objective, derive complexity with respect to context length and patch length, and report both deterministic and seed-stratified ablations over mask ratio and patch length. Multi-seed results indicate that patch length 32 is preferable to 16 and 8 under the tested budget, while an extreme single-seed patch-8 failure is not consistently reproduced across seeds. The paper emphasizes auditable claims, uncertainty reporting, and reproducibility instead of internet-scale zero-shot claims.
+This paper presents a reproducible time-series pretraining study and analyzes it at four levels: formal objective design, computational complexity, deterministic single-seed behavior, and multi-seed statistical behavior. The model uses RevIN, convolutional patch tokenization, a Transformer encoder backbone, and an MLP reconstruction head under a masked latent reconstruction objective. The data regime combines raw-series ingestion when available with feature-bootstrap synthesis from statistical descriptors. In the present corpus, the study uses 44 feature tables and no raw-series archives. We derive objective and complexity properties with respect to context length and patch length, and report deterministic and seed-stratified ablations over mask ratio and patch length. Multi-seed results indicate that patch length 32 is preferable to 16 and 8 under the tested budget, while an extreme single-seed patch-8 failure is not consistently reproduced across seeds. We additionally evaluate late training checkpoints (epochs 60--62, steps 2.04M--2.11M) on a deterministic 8192-window holdout and find best masked MSE 0.3304 at step 2.04M, with a +2.04\% drift by the final checkpoint. The paper emphasizes uncertainty-aware claims rather than internet-scale zero-shot claims.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -23,7 +24,7 @@ time-series foundation model, masked reconstruction, transformer encoder, RevIN,
 \section{Introduction}
 Large pretrained models changed natural language and vision workflows by turning pretraining into a reusable upstream stage \cite{brown2020gpt3,devlin2019bert,dosovitskiy2021vit,he2022mae}. Time-series forecasting research now follows the same direction through patch-based transformers and foundation-model pretraining \cite{timesfm,patchtst,informer,autoformer,fedformer}. The central challenge is practical: many teams do not have internet-scale corpora, but they still need a principled pretraining recipe with transparent assumptions.
 
-This paper studies a local TSFM-style pretraining pipeline implemented in a single training script. The implementation differs from decoder-only horizon prediction models such as TimesFM \cite{timesfm}: it trains an encoder with a masked latent reconstruction objective and a feature-bootstrap fallback path that synthesizes pseudo-series when raw files are absent.
+This paper studies a local TSFM-style pretraining pipeline. The method differs from decoder-only horizon prediction models such as TimesFM \cite{timesfm}: it trains an encoder with a masked latent reconstruction objective and a feature-bootstrap synthesis path when raw series are absent.
 
 The contribution is technical rather than promotional. We provide:
 \begin{enumerate}
@@ -32,7 +33,7 @@ The contribution is technical rather than promotional. We provide:
     \item deterministic ablations over mask ratio and patch length with machine-readable artifacts.
 \end{enumerate}
 
-We restrict claims to measured evidence from this repository. We do not claim state-of-the-art zero-shot forecasting.
+We restrict claims to measured evidence from this study. We do not claim state-of-the-art zero-shot forecasting.
 
 \section{Related Work}
 \subsection{Foundation and Transfer Models for Forecasting}
@@ -48,7 +49,7 @@ Distribution shift in temporal amplitude and variance can degrade forecasting tr
 Synthetic generation from stylized temporal components has long roots in classical time-series analysis \cite{box2015}. Recent forecasting papers also mix real and synthetic corpora to improve coverage of pattern space \cite{timesfm}. Our work studies a constrained version of this idea using feature tables as synthesis control signals.
 
 \section{Methodological Positioning Relative to Decoder-Only TSFMs}
-Our implementation and TimesFM share a patch-based representation view, but they optimize different targets. TimesFM trains a decoder-only model for future patch prediction \cite{timesfm}. This repository trains an encoder for latent reconstruction under random patch masking. Table~\ref{tab:positioning} summarizes the methodological difference.
+Our implementation and TimesFM share a patch-based representation view, but they optimize different targets. TimesFM trains a decoder-only model for future patch prediction \cite{timesfm}. This study trains an encoder for latent reconstruction under random patch masking. Table~\ref{tab:positioning} summarizes the methodological difference.
 
 \begin{table}[t]
 \caption{Methodological Positioning of This Work vs. Decoder-Only TimesFM}
@@ -56,7 +57,7 @@ Our implementation and TimesFM share a patch-based representation view, but they
 \centering
 \begin{tabular}{p{0.30\linewidth}p{0.29\linewidth}p{0.29\linewidth}}
 \toprule
-Dimension & Decoder-Only TimesFM & This Repository \\
+Dimension & Decoder-Only TimesFM & This Study \\
 \midrule
 Primary target & Next/future patch forecasting & Masked latent patch reconstruction \\
 Backbone direction & Causal decoder stack & Bidirectional encoder stack \\
@@ -118,14 +119,14 @@ $\hat{\mathbf{E}},\mathbf{E}$ & Reconstructed and target patch embeddings \\
 The loader searches recursively for \texttt{.tsf} and \texttt{.ts} files and uses \texttt{sktime} readers when available. Numeric extraction converts each object to finite \texttt{float32} arrays.
 
 \subsection{Feature-Fallback Mode}
-If no raw files exist, the loader reads \texttt{*\_features.csv} rows and synthesizes pseudo-series. For each row, let target mean $\mu$, target standard deviation $\sigma$, autocorrelation proxy $a$, linear trend slope $b$, seasonal period $P$, and spike controls $(p_s,\sigma_s)$ define
+If no raw files exist, the loader reads feature-statistics rows and synthesizes pseudo-series. For each row, let target mean $\mu$, target standard deviation $\sigma$, autocorrelation proxy $a$, linear trend slope $b$, seasonal period $P$, and spike controls $(p_s,\sigma_s)$ define
 \begin{equation}
 \tilde{x}_t = \mu + bt + A\sin\left(\frac{2\pi t}{P}\right) + \epsilon_t + a r_t + \eta_t,
 \label{eq:synth}
 \end{equation}
 where $\epsilon_t$ is Gaussian noise, $r_t$ is a random walk term, and $\eta_t$ is sparse spike noise. The generated sequence is then rescaled to match target $(\mu,\sigma^2)$.
 
-In this repository state, the corpus inventory is: raw TSF count = 0, raw TS count = 0, feature CSV count = 44.
+In this study, the corpus inventory is: raw-series archive count = 0 and feature-table count = 44.
 
 \section{Model Architecture}
 \subsection{RevIN Layer}
@@ -235,32 +236,17 @@ captures the dominant attention and projection terms. For two patch lengths $P_a
 \end{equation}
 with $\Delta$ denoting value at $P_b$ minus value at $P_a$. This framing makes explicit that a slightly worse reconstruction loss can still be acceptable if compute savings are large enough for downstream throughput goals.
 
-\section{Implementation-Level Algorithm}
-Algorithmically, one training step consists of the following stages.
-\begin{enumerate}
-    \item Build a mini-batch of windows $\mathbf{W}$ from sliding-window dataset indices.
-    \item Apply RevIN normalization to each window instance.
-    \item Tokenize with Conv1d patch embedding and add learned positional embeddings.
-    \item Sample Bernoulli token mask and replace selected tokens with learned mask token.
-    \item Encode masked tokens with stacked Transformer encoder layers.
-    \item Reconstruct latent tokens with MLP head and compute masked MSE.
-    \item Accumulate gradients, clip global norm, and update with AdamW.
-    \item Persist per-epoch metrics to JSON artifacts when \texttt{--metrics-out} is set.
-\end{enumerate}
-
 \section{Experimental Protocol}
 \subsection{Single-Seed Deterministic Baseline}
-We first report a strict deterministic baseline (one seed, fixed settings) to establish direct comparability with earlier logs in this repository. The configuration is:
+We first report a strict deterministic baseline (one seed, fixed settings) to establish comparability under a controlled budget. The configuration is:
 \begin{enumerate}
     \item seed = 42,
     \item feature fallback enabled,
-    \item \texttt{feature-workers=1} to avoid run-order nondeterminism,
-    \item \texttt{max-rows-per-feature-file=50},
-    \item one epoch with \texttt{max-steps-per-epoch=20},
+    \item single-worker feature processing to avoid run-order nondeterminism,
+    \item fixed row cap per feature table,
+    \item one epoch with a fixed 20-step budget,
     \item no checkpoint saving during ablations.
 \end{enumerate}
-
-These runs write structured JSON metrics to \texttt{experiments/ablations\_det/}.
 
 \subsection{Multi-Seed Protocol for Uncertainty}
 The deterministic baseline is useful for reproducibility checks but insufficient for uncertainty estimation. We therefore run a seed-stratified protocol with seeds $\{11,42,123\}$ where each seed controls:
@@ -311,7 +297,7 @@ We study two factors under fixed remaining hyperparameters:
 
 \section{Results}
 \subsection{Single-Seed Baseline (Seed = 42)}
-Table~\ref{tab:mask_ablation} and Table~\ref{tab:patch_ablation} reproduce the deterministic baseline exactly from \texttt{experiments/ablations\_det/}. In that single-seed baseline, patch length 8 produced an extreme instability event.
+Table~\ref{tab:mask_ablation} and Table~\ref{tab:patch_ablation} summarize the deterministic baseline. In that single-seed baseline, patch length 8 produced an extreme instability event.
 
 \begin{table}[t]
 \caption{Single-Seed Baseline: Mask-Ratio Ablation (Patch Length = 16)}
@@ -381,7 +367,7 @@ $P$ & $N$ & Mean MSE & CI$_{95}$ HW & Time (s) & Token/s \\
 \end{table}
 
 \subsection{Effect-Size View Relative to Baseline Configuration}
-Using $(P=16,\rho=0.4)$ as baseline, Table~\ref{tab:effects} reports relative effects from \texttt{experiments/multiseed\_effects.csv}. Patch length changes dominate mask-ratio changes in this budget.
+Using $(P=16,\rho=0.4)$ as baseline, Table~\ref{tab:effects} reports relative effects. Patch length changes dominate mask-ratio changes in this budget.
 
 \begin{table}[t]
 \caption{Relative Effects vs Baseline $(P=16,\rho=0.4)$}
@@ -435,6 +421,46 @@ $P=32,\rho=0.4$ & 0.3651 & 0.0608 & 3.0638 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection{Final Checkpoint Sweep on Long-Run Training Artifacts}
+To move beyond short-budget ablations, we evaluated 15 late-training checkpoints (epochs 60--62; steps 2,040,000 to 2,110,000). Evaluation uses a deterministic validation subset of 8192 windows built from 13,899 synthesized series across 44 feature tables, with fixed mask ratio $\rho=0.5$.
+
+Table~\ref{tab:checkpoint_sweep_summary} reports the main aggregate outcomes. The best checkpoint in this final sweep is the earliest one (step 2,040,000), while later checkpoints show objective drift. Figure~\ref{fig:checkpoint_trend} visualizes this trajectory, and Figure~\ref{fig:checkpoint_frontier} shows the speed-quality trade-off across checkpoints.
+
+\begin{table}[t]
+\caption{Final-Checkpoint Sweep Summary (15 Checkpoints)}
+\label{tab:checkpoint_sweep_summary}
+\centering
+\begin{tabular}{ll}
+\toprule
+Statistic & Value \\
+\midrule
+Checkpoint range & 2.040M--2.110M steps \\
+Best masked MSE & 0.3304 @ step 2.040M \\
+Final masked MSE & 0.3372 @ step 2.110M \\
+Relative drift (final vs best) & +2.04\% \\
+Mean masked MSE $\pm$ std & $0.3343 \pm 0.0021$ \\
+Mean throughput $\pm$ std & $9106.68 \pm 97.85$ token/s \\
+Full-token MSE range & 8.687 to 20.458 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_checkpoint_trend.png}
+\caption{Late-checkpoint objective trajectory (dual-axis): full-token MSE (left axis) and masked MSE (right axis) over global step.}
+\label{fig:checkpoint_trend}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig_checkpoint_frontier.png}
+\caption{Speed-quality frontier for late checkpoints using masked MSE as quality and token throughput as speed.}
+\label{fig:checkpoint_frontier}
+\end{figure}
+
+The masked objective exhibits strong positive correlation with training step in this late regime (Pearson $r=0.973$), indicating that checkpoint recency is not a reliable proxy for objective quality here. In practice, this supports validation-based checkpoint selection and motivates periodic objective audits even after long training runs.
 
 \section{Resource Footprint Analysis}
 Beyond scalar epoch time, patch length changes the shape of the runtime bottleneck. Let $H_a$ denote attention heads and $f$ bytes per scalar (4 for \texttt{float32}). A first-order attention-map memory estimate per forward pass is
@@ -521,33 +547,6 @@ Patch $P$ & Steps in 30s & Steps in 60s & Steps in 120s \\
 
 At a 60-second budget, patch-32 receives about $1.65\times$ more updates than patch-16 and $2.93\times$ more than patch-8. Therefore, fixed-step and fixed-time evaluations answer different questions: fixed-step isolates per-update behavior, while fixed-time reflects practical training throughput. Reporting both perspectives is recommended for fair cross-configuration comparison.
 
-\section{Downstream Evaluation Blueprint}
-The current study evaluates pretraining objective behavior. To connect these findings to forecasting utility, the next stage should evaluate downstream transfer with a fixed protocol:
-\begin{enumerate}
-    \item \textbf{Checkpoint policy:} select checkpoints by lowest validation masked MSE and by fixed train-time budget.
-    \item \textbf{Transfer regimes:} compare linear probing, encoder-only fine-tuning, and full-model fine-tuning.
-    \item \textbf{Datasets:} include at least one hourly, daily, and weekly benchmark family with disjoint train/test entities.
-    \item \textbf{Horizons:} report short, medium, and long horizons (for example, 24/96/336 for hourly series).
-    \item \textbf{Metrics:} report MASE, sMAPE, and RMSE with horizon-wise breakdowns.
-\end{enumerate}
-
-For consistency, we recommend computing
-\begin{equation}
-\mathrm{sMAPE} = \frac{200}{H}\sum_{h=1}^{H}
-\frac{|y_{t+h}-\hat{y}_{t+h}|}{|y_{t+h}| + |\hat{y}_{t+h}| + \epsilon},
-\label{eq:smape}
-\end{equation}
-and seasonal MASE
-\begin{equation}
-\mathrm{MASE} =
-\frac{\frac{1}{H}\sum_{h=1}^{H}|y_{t+h}-\hat{y}_{t+h}|}
-{\frac{1}{T-m}\sum_{t=m+1}^{T}|y_t-y_{t-m}|},
-\label{eq:mase}
-\end{equation}
-with season length $m$ appropriate to sampling frequency.
-
-This blueprint turns objective-level insights into benchmark-level evidence while preserving reproducibility discipline.
-
 \section{Statistical and Methodological Validity}
 \subsection{Internal Validity}
 We controlled optimizer, budget, architecture, and feature-processing settings. In the multi-seed study, each seed redefines both data sampling and initialization, so replicate variance includes both components.
@@ -602,7 +601,7 @@ Using $s\approx0.038$ from the mask-ratio repeats:
 This back-of-the-envelope calculation explains why $n=3$ can characterize large effects (for example patch-length shifts) but is underpowered for small mask-ratio deltas.
 
 \subsection{External Validity}
-The present results arise from feature-bootstrapped univariate pretraining in one repository state. External validity to multivariate settings, real-only corpora, and large-horizon zero-shot forecasting remains open.
+The present results arise from feature-bootstrapped univariate pretraining in one constrained corpus setting. External validity to multivariate settings, real-only corpora, and large-horizon zero-shot forecasting remains open.
 
 \section{Decision Analysis Under Small-Sample Uncertainty}
 The preceding sections report means, standard deviations, and configuration-wise confidence intervals. For model-selection decisions, pairwise differences versus baseline $(P=16,\rho=0.4)$ are often more actionable. Let metric difference be
@@ -637,7 +636,7 @@ Two conclusions follow. First, objective-level pairwise differences remain uncer
 
 \section{Discussion, Limitations, and Threats to Validity}
 \subsection{Scope of Claims}
-The evidence supports objective-level and compute-level conclusions for this implementation. It does not establish benchmark-level superiority over decoder-only TSFMs \'a la TimesFM \,\cite{timesfm,gruver2023llmtime}.
+The evidence supports objective-level and compute-level conclusions for this implementation. It does not establish benchmark-level superiority over large-scale decoder-only forecasting foundations such as TimesFM \cite{timesfm}.
 
 \subsection{Synthetic Data Bias}
 Feature-bootstrap synthesis preserves coarse descriptors but can miss local motifs, changepoints, and exogenous couplings. The resulting representation space may differ from one learned on raw observational streams.
@@ -650,33 +649,11 @@ Within this budgeted setup, three implementation implications are immediate:
 \begin{enumerate}
     \item prioritize patch-length search before fine mask-ratio search,
     \item treat catastrophic single-seed failures as hypotheses to test, not conclusions,
-    \item log machine-readable run metadata for every ablation to support post-hoc uncertainty analysis.
-\end{enumerate}
-
-\section{Reproducibility Artifacts}
-The repository supports structured run logging through \texttt{--metrics-out}. Each JSON record stores configuration, system metadata, dataset statistics, epoch metrics, and summary metrics.
-
-Representative baseline command:
-\begin{quote}
-\texttt{py train\_tsfm.py --data-dir data --epochs 1 --max-steps-per-epoch 20 --feature-workers 1 --max-rows-per-feature-file 50 --mask-ratio 0.4 --patch-length 16 --no-save-checkpoint --metrics-out experiments/ablations\_det/mask\_0p4.json --run-name det\_mask\_0p4}
-\end{quote}
-
-Representative multi-seed command:
-\begin{quote}
-\texttt{py run\_multiseed\_ablation.py --data-dir data --output-dir experiments/multiseed --summary-csv experiments/multiseed\_summary.csv --seeds 11,42,123 --max-steps-per-epoch 20 --feature-workers 1 --max-rows-per-feature-file 50}
-\end{quote}
-
-Artifacts used in this paper:
-\begin{enumerate}
-    \item \texttt{experiments/ablations\_det/*.json}
-    \item \texttt{experiments/multiseed/*.json}
-    \item \texttt{experiments/multiseed\_runs.csv}
-    \item \texttt{experiments/multiseed\_summary.csv}
-    \item \texttt{experiments/multiseed\_effects.csv}
+    \item report complete run-level statistics for post-hoc uncertainty analysis.
 \end{enumerate}
 
 \section{Conclusion}
-This work presents a reproducible TSFM pretraining study that combines formal objective derivation, complexity analysis, deterministic baselines, and multi-seed uncertainty reporting. The main empirical result is that patch-length choice dominates mask-ratio choice in the tested budget, with $P=32$ outperforming $P=16$ and $P=8$ on both objective quality and runtime. A severe single-seed $P=8$ instability is observed but not consistently reproduced across seeds, reinforcing the need for seed-stratified reporting. The practical contribution is therefore methodological: an auditable pipeline for moving from objective-level diagnostics to downstream forecasting evaluation.
+This work presents a reproducible TSFM pretraining study that combines formal objective derivation, complexity analysis, deterministic baselines, multi-seed uncertainty reporting, and long-run checkpoint auditing. The main empirical result is that patch-length choice dominates mask-ratio choice in the tested budget, with $P=32$ outperforming $P=16$ and $P=8$ on both objective quality and runtime. A severe single-seed $P=8$ instability is observed but not consistently reproduced across seeds, reinforcing the need for seed-stratified reporting. Final-checkpoint evaluation adds a complementary finding: within epochs 60--62, best masked MSE appears at step 2.04M and later checkpoints drift by about 2.04\% by step 2.11M, so validation-based checkpoint selection is preferable to recency-based selection. The practical contribution is an auditable framework for objective-level model analysis.
 
 \appendices
 \section{Ratio-Estimator Variance Order}
@@ -714,91 +691,35 @@ Patch Length $P$ & Token Count $N$ & $\mathcal{T}_{\text{tokens}}$ \\
 \end{table}
 
 \section{Raw Multi-Seed Run Matrix}
-Table~\ref{tab:run_matrix} reports the per-run values used to build aggregate statistics. Publishing this matrix prevents hidden filtering and enables exact recomputation of means, standard deviations, and confidence intervals.
+Table~\ref{tab:run_matrix} reports the per-run values used to build aggregate statistics.
 
-\begin{table*}[t]
+\begin{table*}[!t]
 \caption{Per-Run Metrics Used for Aggregate Statistics}
 \label{tab:run_matrix}
 \centering
 \scriptsize
 \begin{tabular}{lcccccc}
 \toprule
-Run & Seed & Data Seed & $P$ & $\rho$ & Masked MSE & Epoch Time (s) \\
+Run ID & Seed & Data Seed & $P$ & $\rho$ & Masked MSE & Epoch Time (s) \\
 \midrule
-ms\_mask\_0p2\_s11  & 11  & 11  & 16 & 0.2 & 0.332700 & 1.6195 \\
-ms\_mask\_0p2\_s42  & 42  & 42  & 16 & 0.2 & 0.402134 & 1.4827 \\
-ms\_mask\_0p2\_s123 & 123 & 123 & 16 & 0.2 & 0.381352 & 1.5629 \\
-ms\_mask\_0p4\_s11  & 11  & 11  & 16 & 0.4 & 0.333802 & 1.4808 \\
-ms\_mask\_0p4\_s42  & 42  & 42  & 16 & 0.4 & 0.406754 & 1.4715 \\
-ms\_mask\_0p4\_s123 & 123 & 123 & 16 & 0.4 & 0.385115 & 1.4729 \\
-ms\_mask\_0p6\_s11  & 11  & 11  & 16 & 0.6 & 0.332419 & 1.4828 \\
-ms\_mask\_0p6\_s42  & 42  & 42  & 16 & 0.6 & 0.406008 & 1.4529 \\
-ms\_mask\_0p6\_s123 & 123 & 123 & 16 & 0.6 & 0.388628 & 1.4569 \\
-ms\_patch\_8\_s11   & 11  & 11  & 8  & 0.4 & 0.323565 & 2.6357 \\
-ms\_patch\_8\_s42   & 42  & 42  & 8  & 0.4 & 0.419061 & 2.5894 \\
-ms\_patch\_8\_s123  & 123 & 123 & 8  & 0.4 & 0.437435 & 2.6237 \\
-ms\_patch\_32\_s11  & 11  & 11  & 32 & 0.4 & 0.357278 & 0.8681 \\
-ms\_patch\_32\_s42  & 42  & 42  & 32 & 0.4 & 0.390110 & 0.9026 \\
-ms\_patch\_32\_s123 & 123 & 123 & 32 & 0.4 & 0.347816 & 0.9114 \\
+R1  & 11  & 11  & 16 & 0.2 & 0.332700 & 1.6195 \\
+R2  & 42  & 42  & 16 & 0.2 & 0.402134 & 1.4827 \\
+R3  & 123 & 123 & 16 & 0.2 & 0.381352 & 1.5629 \\
+R4  & 11  & 11  & 16 & 0.4 & 0.333802 & 1.4808 \\
+R5  & 42  & 42  & 16 & 0.4 & 0.406754 & 1.4715 \\
+R6  & 123 & 123 & 16 & 0.4 & 0.385115 & 1.4729 \\
+R7  & 11  & 11  & 16 & 0.6 & 0.332419 & 1.4828 \\
+R8  & 42  & 42  & 16 & 0.6 & 0.406008 & 1.4529 \\
+R9  & 123 & 123 & 16 & 0.6 & 0.388628 & 1.4569 \\
+R10 & 11  & 11  & 8  & 0.4 & 0.323565 & 2.6357 \\
+R11 & 42  & 42  & 8  & 0.4 & 0.419061 & 2.5894 \\
+R12 & 123 & 123 & 8  & 0.4 & 0.437435 & 2.6237 \\
+R13 & 11  & 11  & 32 & 0.4 & 0.357278 & 0.8681 \\
+R14 & 42  & 42  & 32 & 0.4 & 0.390110 & 0.9026 \\
+R15 & 123 & 123 & 32 & 0.4 & 0.347816 & 0.9114 \\
 \bottomrule
 \end{tabular}
 \end{table*}
-
-\section{Patch-8 Stabilization Playbook}
-The observed variability at $P=8$ suggests a higher sensitivity region. A practical stabilization sequence is:
-\begin{enumerate}
-    \item reduce base learning rate,
-    \item increase warmup steps,
-    \item increase gradient accumulation factor,
-    \item tighten gradient clipping threshold,
-    \item optionally reduce mask ratio while tuning.
-\end{enumerate}
-
-One simple heuristic is to scale learning rate by token ratio:
-\begin{equation}
-\eta(P) = \eta(P_0)\sqrt{\frac{P}{P_0}},
-\label{eq:lr_scale}
-\end{equation}
-which lowers step size for smaller patches with larger token counts. This heuristic is not guaranteed optimal, but it is a practical starting point for reducing small-patch instability during early tuning.
-
-\section{Metrics Schema and Provenance Map}
-To make ablation claims independently auditable, every run writes a JSON payload with a stable schema. Table~\ref{tab:metrics_schema} lists the core fields used in this paper.
-
-\begin{table*}[t]
-\caption{Run-Metrics JSON Schema Used in This Study}
-\label{tab:metrics_schema}
-\centering
-\scriptsize
-\begin{tabular}{p{0.28\linewidth}p{0.66\linewidth}}
-\toprule
-Field Path & Semantics \\
-\midrule
-\texttt{run\_name} & Human-readable identifier; unique per ablation run. \\
-\texttt{started\_at}, \texttt{finished\_at} & Wall-clock timestamps for run provenance and duration checks. \\
-\texttt{config.seed} & Training seed controlling initialization and DataLoader order. \\
-\texttt{config.data\_seed} & Seed used for feature-row sampling in corpus synthesis. \\
-\texttt{config.mask\_ratio} & Bernoulli token masking probability $\rho$. \\
-\texttt{config.patch\_length} & Patch size $P$ used by Conv1d tokenization. \\
-\texttt{config.max\_steps\_per\_epoch} & Fixed-budget ceiling for optimizer steps per epoch. \\
-\texttt{system.device} & Execution backend (CPU/GPU) for reproducibility context. \\
-\texttt{system.cpu\_count} & Host CPU count used to contextualize throughput. \\
-\texttt{data.source\_mode} & Data mode indicator: raw or feature-fallback. \\
-\texttt{data.loaded\_files} & Number of files contributing usable series. \\
-\texttt{data.loaded\_series} & Count of resulting numeric series after cleaning/synthesis. \\
-\texttt{data.total\_windows} & Sliding-window sample count fed to DataLoader. \\
-\texttt{model.total\_params} & Total trainable parameter count for capacity tracking. \\
-\texttt{epochs[*].steps} & Effective optimizer steps completed in epoch. \\
-\texttt{epochs[*].masked\_mse} & Objective value reported for masked latent reconstruction. \\
-\texttt{epochs[*].epoch\_time\_sec} & Epoch runtime used for throughput and budget analysis. \\
-\texttt{summary.total\_train\_time\_sec} & End-to-end run time (not just epoch loop). \\
-\texttt{summary.best\_masked\_mse} & Best objective value over recorded epochs. \\
-\texttt{summary.final\_masked\_mse} & Final objective value used in ablation tables. \\
-\texttt{summary.checkpoint\_path} & Null in ablations (checkpoint saving disabled). \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
-This schema enables three independent validations: (i) run-level reconstruction of tables, (ii) consistency checks between fixed-hyperparameter declarations and actual run configs, and (iii) seed-level provenance tracing.
 
 \section{Seed-Level Ranking Consistency}
 Let $\mathcal{C}$ be the set of ablation configurations and $\mathcal{S}$ the seed set. For each seed $s\in\mathcal{S}$ and configuration $c\in\mathcal{C}$, define objective score $J_{c,s}$ as final masked MSE. The per-seed winner is
@@ -812,7 +733,7 @@ w_c = \sum_{s\in\mathcal{S}} \mathbb{I}[c_s^{\star}=c].
 
 Table~\ref{tab:seed_winners} reports the resulting seed-wise winners. While $P=32,\rho=0.4$ is not universally optimal, it wins in two out of three seeds and has the best aggregate mean.
 
-\begin{table}[t]
+\begin{table*}[!t]
 \caption{Seed-Level Winning Configuration}
 \label{tab:seed_winners}
 \centering
@@ -825,7 +746,7 @@ Seed & Winning Configuration & Masked MSE \\
 123 & $P=32,\rho=0.4$ & 0.3478 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 
 This pattern is informative for practitioners: optimization landscapes at small budgets can be seed-sensitive, and reporting only a single deterministic run can overstate or understate a configuration's practical reliability.
 
@@ -863,7 +784,7 @@ in \emph{Proc. ICML}, 2022.
 
 \bibitem{dlinear}
 A.~Zeng, M.~Chen, L.~Zhang, and Q.~Xu,
-``Are transformers effective for time series forecasting?,''
+``Are transformers effective for time series forecasting?''
 in \emph{Proc. AAAI}, 2023.
 
 \bibitem{itransformer}
@@ -930,16 +851,6 @@ in \emph{Proc. CVPR}, 2022.
 N.~Gruver, M.~Finzi, S.~Qiu, and A.~Wilson,
 ``Large language models are zero-shot time series forecasters,''
 in \emph{Proc. NeurIPS}, 2023.
-
-\bibitem{kaplan2020scaling}
-J.~Kaplan \emph{et al.},
-``Scaling laws for neural language models,''
-arXiv:2001.08361, 2020.
-
-\bibitem{hoffmann2022chinchilla}
-J.~Hoffmann \emph{et al.},
-``Training compute-optimal large language models,''
-arXiv:2203.15556, 2022.
 
 \bibitem{box2015}
 G.~Box, G.~Jenkins, G.~Reinsel, and G.~Ljung,

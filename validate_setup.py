@@ -64,6 +64,7 @@ def check_files():
         'finetune_forecasting.py',
         'prepare_datasets.py',
         'evaluate_results.py',
+        'evaluate_checkpoints.py',
     ]
     
     optional_files = [
@@ -173,6 +174,10 @@ def quick_import_test():
         print("\nImporting from evaluate_results.py...")
         from evaluate_results import ResultsAnalyzer
         print("  ✓ ResultsAnalyzer")
+
+        print("\nImporting from evaluate_checkpoints.py...")
+        from evaluate_checkpoints import DATASET_SPECS
+        print(f"  ✓ Benchmark evaluator ({len(DATASET_SPECS)} datasets)")
         
         return True
     except ImportError as e:

@@ -5,6 +5,7 @@
 # bash quickstart.sh --quick              # Fast test
 # bash quickstart.sh --linear-probe-only  # Statistical validation
 # bash quickstart.sh --eval               # Just analyze results
+# bash quickstart.sh --benchmark-eval      # Evaluate TSFM vs TimesFM baseline
 
 set -e  # Exit on error
 
@@ -82,6 +83,10 @@ elif [ "$1" == "--finetune" ]; then
 elif [ "$1" == "--eval" ]; then
     echo -e "${GREEN}Analyzing Results${NC}"
     python evaluate_results.py
+
+elif [ "$1" == "--benchmark-eval" ]; then
+    echo -e "${GREEN}Running Benchmark Evaluator (TSFM vs TimesFM)${NC}"
+    python evaluate_checkpoints.py --models both --checkpoint-glob "finetuning_results/model_*.pt"
     
 elif [ "$1" == "--linear-probe-only" ]; then
     echo -e "${GREEN}Running Linear Probe Only (Fast)${NC}"
@@ -104,6 +109,7 @@ elif [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
     echo "  --pm25              Prepare Beijing PM2.5 dataset"
     echo "  --finetune          Run fine-tuning with from-scratch baseline"
     echo "  --eval              Analyze results and generate plots"
+    echo "  --benchmark-eval    Evaluate TSFM checkpoints vs TimesFM baseline"
     echo "  --linear-probe-only Run linear probe validation (fast)"
     echo "  --quick             Quick test with synthetic data (2 epochs)"
     echo "  --help              Show this help message"

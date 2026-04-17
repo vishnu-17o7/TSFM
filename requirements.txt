@@ -4,3 +4,5 @@ pandas
 sktime
 polars
 tqdm
+requests
+timesfm[torch]>=1.3.0

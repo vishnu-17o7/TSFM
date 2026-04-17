@@ -1,0 +1,26 @@
+{
+  "ETTh1": {
+    "test_mse": 1.4882310628890991,
+    "test_mae": 0.9624248147010803,
+    "scratch_test_mse": 1.4490182399749756,
+    "scratch_test_mae": 0.9900020956993103
+  },
+  "Metro": {
+    "test_mse": 1.081748366355896,
+    "test_mae": 0.9088317155838013,
+    "scratch_test_mse": 1.076992154121399,
+    "scratch_test_mae": 0.9003585577011108
+  },
+  "Beijing_PM25": {
+    "test_mse": 0.7770766019821167,
+    "test_mae": 0.6813476085662842,
+    "scratch_test_mse": 0.9868556261062622,
+    "scratch_test_mae": 0.7725400328636169
+  },
+  "Environmental_Sensor_Telemetry": {
+    "test_mse": 1.5378972172737122,
+    "test_mae": 0.9741766214370727,
+    "scratch_test_mse": 1.614201819896698,
+    "scratch_test_mae": 1.0043955326080323
+  }
+}

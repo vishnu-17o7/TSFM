@@ -17,6 +17,7 @@ It also includes deterministic checkpoint evaluation and multi-seed ablation scr
 - [Data Requirements](#data-requirements)
 - [Training](#training)
 - [Checkpoint Evaluation](#checkpoint-evaluation)
+- [Benchmark Evaluation](#benchmark-evaluation-tsfm-vs-timesfm)
 - [Multi-Seed Ablations](#multi-seed-ablations)
 - [Outputs and Artifacts](#outputs-and-artifacts)
 - [Reproducibility Notes](#reproducibility-notes)
@@ -200,6 +201,72 @@ Generated files in `experiments/checkpoint_eval`:
 - `checkpoint_mse_trend.png`
 - `checkpoint_speed_quality.png`
 
+## Benchmark Evaluation (TSFM vs TimesFM)
+
+Use the evaluator to compare TSFM checkpoints with a pip-installed TimesFM baseline on:
+
+- ETTh1
+- ETTh2
+- ETTm1
+- ETTm2
+- Electricity
+- Traffic
+- Weather
+
+Install dependencies:
+
+```powershell
+py -m pip install -r requirements.txt
+```
+
+Prepare benchmark datasets:
+
+```powershell
+py prepare_datasets.py --timesfm-benchmarks
+```
+
+Run evaluation:
+
+```powershell
+py evaluate_checkpoints.py --models both --checkpoint-glob "finetuning_results/model_*.pt" --forecast-horizon 96
+```
+
+Notes:
+
+- `checkpoints/*.pt` are pretraining checkpoints and typically miss `forecasting_head.*`; evaluator now fails fast on those by default.
+- If a TSFM checkpoint horizon is shorter than `--forecast-horizon` (for example 24 vs 96), evaluator uses autoregressive rollout to match the requested horizon.
+
+Output is saved to:
+
+- `finetuning_results/benchmark_results.json`
+
+Print a ranked leaderboard from the saved benchmark JSON:
+
+```powershell
+py benchmark_leaderboard.py --input finetuning_results/benchmark_results.json --sort-by mean_mse --show-dataset-winners
+```
+
+### Scaling Reconciliation Rules
+
+The evaluator enforces scale-safe comparison between TSFM and TimesFM:
+
+1. TimesFM uses internal normalization:
+- v2.5 API: `ForecastConfig(normalize_inputs=True)`
+- v1 API: `forecast(..., normalize=True)`
+2. TSFM inputs are z-normalized with train-split stats by default, then TSFM outputs are inverse-scaled back to raw units.
+3. MSE/MAE are always computed in raw dataset units.
+
+Positive examples:
+
+- TimesFM normalize enabled, forecast compared directly to raw target.
+- TSFM context normalized by train mean/std, then prediction inverse-scaled with the same stats before metric calculation.
+
+Negative examples:
+
+- Enabling TimesFM normalization and then manually inverse-scaling TimesFM outputs (double inverse).
+- Manually z-scoring TimesFM inputs while also `normalize_inputs=True` (double normalization).
+- Comparing normalized TSFM outputs directly against raw targets.
+
 ## Multi-Seed Ablations
 
 Run ablations across mask ratio and patch length using multiple seeds.
@@ -296,11 +363,11 @@ If you use this code or artifacts, cite the project paper source in this reposit
 
 ```bibtex
 @misc{vishn2026featurebootstrappedtsfm,
-	title        = {Feature-Bootstrapped Masked TSFM: Theory, Complexity, and Controlled Ablations for Reproducible Time-Series Pretraining},
-	author       = {Vishn},
-	year         = {2026},
-	howpublished = {GitHub repository manuscript},
-	note         = {Source file: paper_tsfm_ieee.tex}
+title        = {Feature-Bootstrapped Masked TSFM: Theory, Complexity, and Controlled Ablations for Reproducible Time-Series Pretraining},
+author       = {Vishn},
+year         = {2026},
+howpublished = {GitHub repository manuscript},
+note         = {Source file: paper_tsfm_ieee.tex}
 }
 ```
 
@@ -308,10 +375,10 @@ You can also cite TimesFM for broader foundation-model context:
 
 ```bibtex
 @article{das2024timesfm,
-	title   = {A Decoder-only Foundation Model for Time-Series Forecasting},
-	author  = {Das, Abhimanyu and Kong, Weihao and Sen, Rajat and Zhou, Yichen},
-	journal = {arXiv preprint arXiv:2310.10688},
-	year    = {2024}
+title   = {A Decoder-only Foundation Model for Time-Series Forecasting},
+author  = {Das, Abhimanyu and Kong, Weihao and Sen, Rajat and Zhou, Yichen},
+journal = {arXiv preprint arXiv:2310.10688},
+year    = {2024}
 }
 ```
 

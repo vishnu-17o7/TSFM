@@ -1,0 +1,20 @@
+{
+  "Metro": {
+    "test_mse": 1.5905981063842773,
+    "test_mae": 1.039849579334259,
+    "scratch_test_mse": 1.3088944852352142,
+    "scratch_test_mae": 0.9203664660453796
+  },
+  "Beijing_PM25": {
+    "test_mse": 0.6520615816116333,
+    "test_mae": 0.6482740938663483,
+    "scratch_test_mse": 0.6402650773525238,
+    "scratch_test_mae": 0.6415112614631653
+  },
+  "Environmental_Sensor_Telemetry": {
+    "test_mse": 2.0156090378761293,
+    "test_mae": 1.122051179409027,
+    "scratch_test_mse": 1.9519345164299011,
+    "scratch_test_mae": 1.1023004353046417
+  }
+}

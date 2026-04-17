@@ -238,15 +238,17 @@ def _run_single(
 def _summary_rows(run_payloads: List[Dict[str, object]], batch_size: int, context_length: int) -> pd.DataFrame:
     rows: List[Dict[str, object]] = []
     t_critical = {
-        2: 12.706,
-        3: 4.303,
-        4: 3.182,
-        5: 2.776,
-        6: 2.571,
-        7: 2.447,
-        8: 2.365,
-        9: 2.306,
-        10: 2.262,
+        # Two-sided 95% Student-t critical values keyed by degrees of freedom.
+        1: 12.706,
+        2: 4.303,
+        3: 3.182,
+        4: 2.776,
+        5: 2.571,
+        6: 2.447,
+        7: 2.365,
+        8: 2.306,
+        9: 2.262,
+        10: 2.228,
     }
 
     flat: List[Dict[str, object]] = []

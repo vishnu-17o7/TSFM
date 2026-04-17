@@ -239,13 +239,18 @@ class ResultsAnalyzer:
             if "MSE Improvement %" in df.columns:
                 avg_improvement = df["MSE Improvement %"].mean()
 
+            positive_count = 0
+            total_count = 0
+            if "MSE Improvement %" in df.columns:
+                positive_count = int((df["MSE Improvement %"] > 0).sum())
+                total_count = int(df["MSE Improvement %"].notna().sum())
+
             if avg_improvement > 0:
                 f.write(
-                    f"Pre-training on synthetic time-series data provides consistent benefits:\n"
-                    f"On average, pre-trained models achieve **{avg_improvement:.2f}% better MSE** than "
-                    f"models trained from scratch.\n"
-                    f"This validates the effectiveness of pre-training for learning universal "
-                    f"time-series representations.\n"
+                    f"On this run, pre-trained models show an average **{avg_improvement:.2f}% MSE improvement** "
+                    f"relative to from-scratch baselines.\n"
+                    f"Improvements are mixed across datasets ({positive_count}/{total_count} positive), "
+                    f"so this should be treated as preliminary rather than universal evidence.\n"
                 )
             elif avg_improvement < 0:
                 f.write(

@@ -4,6 +4,7 @@ Implements: Data acquisition, architecture adaptation, linear probe, full fine-t
 """
 
 import argparse
+import copy
 import json
 import os
 import random
@@ -15,6 +16,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader, Dataset, random_split
 from tqdm import tqdm
 
@@ -171,6 +173,27 @@ class TimeSeriesDataModule:
         return data
 
     @staticmethod
+    def load_etth1(data_dir: Optional[Path] = None) -> np.ndarray:
+        """Load ETTh1 target series (OT column)."""
+        if data_dir is None:
+            data_dir = Path("data")
+
+        csv_path = data_dir / "ETTh1.csv"
+        if not csv_path.exists():
+            print("[INFO] ETTh1.csv not found, creating synthetic ETT-like data for demo...")
+            return TimeSeriesDataModule._create_synthetic_ett(length=17420)
+
+        df = pd.read_csv(csv_path)
+        if "OT" in df.columns:
+            series = pd.to_numeric(df["OT"], errors="coerce").ffill().bfill()
+        else:
+            numeric_df = df.select_dtypes(include=[np.number])
+            if numeric_df.empty:
+                raise ValueError("ETTh1.csv has no numeric columns")
+            series = pd.to_numeric(numeric_df.iloc[:, 0], errors="coerce").ffill().bfill()
+        return series.to_numpy(dtype=np.float32)
+
+    @staticmethod
     def _create_synthetic_ett(length: int = 8760, seed: int = 42) -> np.ndarray:
         """Create synthetic ETT-like data."""
         rng = np.random.default_rng(seed)
@@ -227,6 +250,12 @@ class TimeSeriesDataModule:
             std = 1.0
         normalized = (data - mean) / std
         return normalized.astype(np.float32), mean, std
+
+    @staticmethod
+    def normalize_with_stats(data: np.ndarray, mean: float, std: float) -> np.ndarray:
+        """Normalize using externally provided statistics (for leakage-safe splits)."""
+        safe_std = std if std >= 1e-6 else 1.0
+        return ((data - mean) / safe_std).astype(np.float32)
 
     @staticmethod
     def split_series(
@@ -383,6 +412,39 @@ class TSFMForForecasting(nn.Module):
             for param in module.parameters():
                 param.requires_grad = True
 
+    def freeze_for_partial_finetuning(
+        self,
+        train_last_n_transformer_layers: int = 1,
+        freeze_revin: bool = True,
+        freeze_patch_embedding: bool = True,
+    ) -> None:
+        """Freeze the backbone while leaving the forecasting head and last layers trainable."""
+        for param in self.parameters():
+            param.requires_grad = False
+
+        for param in self.forecasting_head.parameters():
+            param.requires_grad = True
+
+        if not freeze_revin:
+            for param in self.revin.parameters():
+                param.requires_grad = True
+
+        if not freeze_patch_embedding:
+            for param in self.patch_embedding.parameters():
+                param.requires_grad = True
+
+        if train_last_n_transformer_layers > 0:
+            layers = list(self.transformer.encoder.layers)
+            keep_layers = layers[-train_last_n_transformer_layers:]
+            for layer in keep_layers:
+                for param in layer.parameters():
+                    param.requires_grad = True
+
+            encoder_norm = getattr(self.transformer.encoder, "norm", None)
+            if encoder_norm is not None:
+                for param in encoder_norm.parameters():
+                    param.requires_grad = True
+
     def load_pretrained(self, checkpoint_path: str, device: torch.device):
         """Load pre-trained weights from checkpoint."""
         print(f"[INFO] Loading pre-trained weights from {checkpoint_path}...")
@@ -474,6 +536,7 @@ def train_epoch(
     device: torch.device,
     use_amp: bool = False,
     max_steps: Optional[int] = None,
+    scheduler: Optional[LambdaLR] = None,
 ) -> float:
     """Train for one epoch."""
     model.train()
@@ -496,12 +559,28 @@ def train_epoch(
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
 
         total_loss += loss.item()
         count += 1
         pbar.set_postfix({"loss": f"{loss.item():.6f}"})
 
     return total_loss / count
+
+
+def build_linear_warmup_scheduler(
+    optimizer: torch.optim.Optimizer,
+    warmup_steps: int,
+) -> Optional[LambdaLR]:
+    """Builds a simple linear warmup scheduler."""
+    if warmup_steps <= 0:
+        return None
+
+    def lr_lambda(step: int) -> float:
+        return min(1.0, float(step + 1) / float(warmup_steps))
+
+    return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
 
 @torch.no_grad()
@@ -563,10 +642,16 @@ def linear_probe_training(
     )
 
     history = {"train_loss": [], "val_mse": [], "val_mae": []}
+    best_val_mse = float("inf")
+    best_state: Optional[Dict[str, torch.Tensor]] = None
 
     for epoch in range(1, epochs + 1):
         train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
         val_mse, val_mae, _ = evaluate(model, val_loader, criterion, device)
+
+        if val_mse < best_val_mse:
+            best_val_mse = val_mse
+            best_state = copy.deepcopy(model.state_dict())
 
         history["train_loss"].append(train_loss)
         history["val_mse"].append(val_mse)
@@ -576,6 +661,10 @@ def linear_probe_training(
             f"Epoch {epoch}/{epochs} | Train Loss: {train_loss:.6f} | "
             f"Val MSE: {val_mse:.6f} | Val MAE: {val_mae:.6f}"
         )
+
+    if best_state is not None:
+        model.load_state_dict(best_state)
+        print(f"[INFO] Restored best linear-probe checkpoint (val_mse={best_val_mse:.6f})")
 
     return history
 
@@ -587,6 +676,10 @@ def full_finetuning(
     device: torch.device,
     epochs: int = 20,
     lr: float = 5e-5,
+    freeze_last_n_transformer_layers: int = 0,
+    freeze_revin: bool = False,
+    freeze_patch_embedding: bool = False,
+    warmup_epochs: int = 0,
 ) -> Dict[str, List[float]]:
     """
     Full fine-tuning with unfrozen encoder (lower learning rate).
@@ -595,15 +688,48 @@ def full_finetuning(
     print("FULL FINE-TUNING (Unfrozen Encoder)")
     print("=" * 80)
 
-    model.unfreeze_encoder()
+    if freeze_last_n_transformer_layers > 0 or freeze_revin or freeze_patch_embedding:
+        model.freeze_for_partial_finetuning(
+            train_last_n_transformer_layers=freeze_last_n_transformer_layers,
+            freeze_revin=freeze_revin,
+            freeze_patch_embedding=freeze_patch_embedding,
+        )
+    else:
+        model.unfreeze_encoder()
+
     criterion = nn.MSELoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    trainable_params = [p for p in model.parameters() if p.requires_grad]
+    if not trainable_params:
+        print("[WARN] No trainable parameters for fine-tuning; skipping stage.")
+        return {"train_loss": [], "val_mse": [], "val_mae": []}
+
+    optimizer = torch.optim.AdamW(trainable_params, lr=lr, weight_decay=1e-4)
+    warmup_steps = max(0, warmup_epochs * len(train_loader))
+    scheduler = build_linear_warmup_scheduler(optimizer, warmup_steps)
 
     history = {"train_loss": [], "val_mse": [], "val_mae": []}
+    best_val_mse = float("inf")
+    best_state: Optional[Dict[str, torch.Tensor]] = None
+
+    init_val_mse, init_val_mae, _ = evaluate(model, val_loader, criterion, device)
+    best_val_mse = init_val_mse
+    best_state = copy.deepcopy(model.state_dict())
+    print(f"[INFO] Pre-finetune validation baseline: mse={init_val_mse:.6f}, mae={init_val_mae:.6f}")
 
     for epoch in range(1, epochs + 1):
-        train_loss = train_epoch(model, train_loader, optimizer, criterion, device)
+        train_loss = train_epoch(
+            model,
+            train_loader,
+            optimizer,
+            criterion,
+            device,
+            scheduler=scheduler,
+        )
         val_mse, val_mae, _ = evaluate(model, val_loader, criterion, device)
+
+        if val_mse < best_val_mse:
+            best_val_mse = val_mse
+            best_state = copy.deepcopy(model.state_dict())
 
         history["train_loss"].append(train_loss)
         history["val_mse"].append(val_mse)
@@ -614,7 +740,47 @@ def full_finetuning(
             f"Val MSE: {val_mse:.6f} | Val MAE: {val_mae:.6f}"
         )
 
+    if best_state is not None:
+        model.load_state_dict(best_state)
+        print(f"[INFO] Restored best fine-tune checkpoint (val_mse={best_val_mse:.6f})")
+
     return history
+
+
+def describe_series(series: np.ndarray) -> Dict[str, float]:
+    """Compute simple diagnostics to inspect domain shift across datasets."""
+    x = series.astype(np.float32)
+    n = len(x)
+    if n < 2:
+        return {
+            "length": float(n),
+            "mean": float(np.mean(x) if n else 0.0),
+            "std": float(np.std(x) if n else 0.0),
+            "acf1": 0.0,
+            "diff_std": 0.0,
+            "outlier_rate_3sigma": 0.0,
+        }
+
+    centered = x - np.mean(x)
+    var = float(np.var(centered))
+    acf1 = 0.0
+    if var > 1e-8:
+        acf1 = float(np.dot(centered[:-1], centered[1:]) / ((n - 1) * var))
+
+    std = float(np.std(x))
+    if std < 1e-8:
+        outlier_rate = 0.0
+    else:
+        outlier_rate = float(np.mean(np.abs((x - np.mean(x)) / std) > 3.0))
+
+    return {
+        "length": float(n),
+        "mean": float(np.mean(x)),
+        "std": std,
+        "acf1": acf1,
+        "diff_std": float(np.std(np.diff(x))),
+        "outlier_rate_3sigma": outlier_rate,
+    }
 
 
 # ============================================================================
@@ -665,29 +831,83 @@ def main():
 
     datasets_info = {}
     all_results = {}
+    diagnostics: Dict[str, Dict[str, float]] = {}
+
+    dataset_profiles = {
+        "Metro": {
+            "context_length": args.context_length,
+            "linear_probe_lr": args.linear_probe_lr,
+            "finetune_lr": args.finetune_lr,
+            "freeze_last_n_transformer_layers": 0,
+            "warmup_epochs": 0,
+        },
+        "Beijing_PM25": {
+            "context_length": args.context_length,
+            "linear_probe_lr": min(args.linear_probe_lr, 5e-4),
+            "finetune_lr": min(args.finetune_lr, 1e-5),
+            "freeze_last_n_transformer_layers": 1,
+            "freeze_revin": True,
+            "freeze_patch_embedding": True,
+            "warmup_epochs": 2,
+            "finetune_epochs": 8,
+        },
+        "Environmental_Sensor_Telemetry": {
+            "context_length": args.context_length,
+            "linear_probe_lr": args.linear_probe_lr,
+            "finetune_lr": args.finetune_lr,
+            "freeze_last_n_transformer_layers": 0,
+            "warmup_epochs": 0,
+        },
+        "ETTh1": {
+            "context_length": max(args.context_length, 768),
+            "linear_probe_lr": min(args.linear_probe_lr, 5e-4),
+            "finetune_lr": min(args.finetune_lr, 3e-5),
+            "freeze_last_n_transformer_layers": 2,
+            "freeze_revin": True,
+            "freeze_patch_embedding": True,
+            "warmup_epochs": 2,
+            "finetune_epochs": 12,
+        },
+    }
 
     for dataset_name, loader_fn in [
         ("Metro", TimeSeriesDataModule.load_metro_volume),
         ("Beijing_PM25", TimeSeriesDataModule.load_beijing_pm25),
         ("Environmental_Sensor_Telemetry", TimeSeriesDataModule.load_environmental_sensor_telemetry),
+        ("ETTh1", TimeSeriesDataModule.load_etth1),
     ]:
         print(f"\n[INFO] Loading {dataset_name}...")
         data = loader_fn(args.data_dir)
-        data_norm, mean, std = TimeSeriesDataModule.normalize_series(data)
-        train_data, val_data, test_data = TimeSeriesDataModule.split_series(
-            data_norm, train_ratio=0.7, val_ratio=0.1, test_ratio=0.2
+        diagnostics[dataset_name] = describe_series(data)
+
+        # Split first, then normalize all splits with train statistics only.
+        train_raw, val_raw, test_raw = TimeSeriesDataModule.split_series(
+            data, train_ratio=0.7, val_ratio=0.1, test_ratio=0.2
         )
+        train_mean = float(train_raw.mean())
+        train_std = float(train_raw.std())
+        if train_std < 1e-6:
+            train_std = 1.0
+
+        train_data = TimeSeriesDataModule.normalize_with_stats(train_raw, train_mean, train_std)
+        val_data = TimeSeriesDataModule.normalize_with_stats(val_raw, train_mean, train_std)
+        test_data = TimeSeriesDataModule.normalize_with_stats(test_raw, train_mean, train_std)
 
         print(f"  - Original length: {len(data)}")
         print(f"  - Train: {len(train_data)}, Val: {len(val_data)}, Test: {len(test_data)}")
-        print(f"  - Mean: {mean:.4f}, Std: {std:.4f}")
+        print(f"  - Train Mean: {train_mean:.4f}, Train Std: {train_std:.4f}")
+        print(
+            f"  - Diagnostics: acf1={diagnostics[dataset_name]['acf1']:.4f}, "
+            f"diff_std={diagnostics[dataset_name]['diff_std']:.4f}, "
+            f"outlier_rate_3sigma={diagnostics[dataset_name]['outlier_rate_3sigma']:.4f}"
+        )
 
         datasets_info[dataset_name] = {
             "train": train_data,
             "val": val_data,
             "test": test_data,
-            "mean": mean,
-            "std": std,
+            "mean": train_mean,
+            "std": train_std,
             "original": data,
         }
 
@@ -701,26 +921,44 @@ def main():
         print(f"DATASET: {dataset_name}")
         print(f"{'=' * 80}")
 
+        profile = dataset_profiles.get(dataset_name, {})
+        context_length = int(profile.get("context_length", args.context_length))
+        linear_probe_lr = float(profile.get("linear_probe_lr", args.linear_probe_lr))
+        finetune_lr = float(profile.get("finetune_lr", args.finetune_lr))
+        freeze_last_n_transformer_layers = int(profile.get("freeze_last_n_transformer_layers", 0))
+        freeze_revin = bool(profile.get("freeze_revin", False))
+        freeze_patch_embedding = bool(profile.get("freeze_patch_embedding", False))
+        warmup_epochs = int(profile.get("warmup_epochs", 0))
+        finetune_epochs = int(profile.get("finetune_epochs", args.finetune_epochs))
+
+        if context_length != args.context_length:
+            print(f"[INFO] Using dataset-specific context_length={context_length} for {dataset_name}")
+        if dataset_name == "Beijing_PM25":
+            print(
+                f"[INFO] Conservative Beijing_PM25 fine-tuning: lr={finetune_lr:.2e}, "
+                f"freeze_last_n_transformer_layers={freeze_last_n_transformer_layers}, warmup_epochs={warmup_epochs}"
+            )
+
         dataset_results = {}
 
         # Create datasets
         train_dataset = TimeSeriesDataset(
             data_dict["train"],
-            context_length=args.context_length,
+            context_length=context_length,
             forecast_horizon=args.forecast_horizon,
-            stride=args.context_length // 4,  # 25% overlap
+            stride=context_length // 4,  # 25% overlap
         )
         val_dataset = TimeSeriesDataset(
             data_dict["val"],
-            context_length=args.context_length,
+            context_length=context_length,
             forecast_horizon=args.forecast_horizon,
-            stride=args.context_length,  # No overlap for validation
+            stride=context_length,  # No overlap for validation
         )
         test_dataset = TimeSeriesDataset(
             data_dict["test"],
-            context_length=args.context_length,
+            context_length=context_length,
             forecast_horizon=args.forecast_horizon,
-            stride=args.context_length,  # No overlap for test
+            stride=context_length,  # No overlap for test
         )
 
         print(f"  Train windows: {len(train_dataset)}")
@@ -752,7 +990,7 @@ def main():
         # ---- Pretrained Fine-tuning ----
         print(f"\n[INFO] Training with pre-trained model...")
         model = TSFMForForecasting(
-            context_length=args.context_length,
+            context_length=context_length,
             patch_length=args.patch_length,
             embed_dim=args.embed_dim,
             num_heads=args.num_heads,
@@ -775,7 +1013,7 @@ def main():
             val_loader,
             device,
             epochs=args.linear_probe_epochs,
-            lr=args.linear_probe_lr,
+            lr=linear_probe_lr,
         )
 
         dataset_results["linear_probe"] = linear_probe_history
@@ -786,8 +1024,12 @@ def main():
             train_loader,
             val_loader,
             device,
-            epochs=args.finetune_epochs,
-            lr=args.finetune_lr,
+            epochs=finetune_epochs,
+            lr=finetune_lr,
+            freeze_last_n_transformer_layers=freeze_last_n_transformer_layers,
+            freeze_revin=freeze_revin,
+            freeze_patch_embedding=freeze_patch_embedding,
+            warmup_epochs=warmup_epochs,
         )
 
         dataset_results["finetune"] = finetune_history
@@ -811,7 +1053,7 @@ def main():
         if args.train_from_scratch:
             print(f"\n[INFO] Training identical model from scratch (baseline)...")
             baseline_model = TSFMForForecasting(
-                context_length=args.context_length,
+                context_length=context_length,
                 patch_length=args.patch_length,
                 embed_dim=args.embed_dim,
                 num_heads=args.num_heads,
@@ -869,6 +1111,11 @@ def main():
     with open(results_file, "w") as f:
         json.dump(results_summary, f, indent=2)
     print(f"[INFO] Results saved to {results_file}")
+
+    diagnostics_file = args.output_dir / "dataset_diagnostics.json"
+    with open(diagnostics_file, "w") as f:
+        json.dump(diagnostics, f, indent=2)
+    print(f"[INFO] Dataset diagnostics saved to {diagnostics_file}")
 
     print("\n" + "=" * 80)
     print("SUMMARY")

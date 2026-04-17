@@ -1,7 +1,7 @@
 {
   "run_name": "ms_patch_32_s123",
-  "started_at": "2026-03-30T12:28:21",
-  "finished_at": "2026-03-30T12:28:22",
+  "started_at": "2026-04-17T21:35:14",
+  "finished_at": "2026-04-17T21:35:14",
   "config": {
     "seed": 123,
     "data_seed": 123,
@@ -27,9 +27,9 @@
     "patch_length": 32
   },
   "system": {
-    "device": "cpu",
-    "cpu_count": 16,
-    "use_amp": false
+    "device": "cuda",
+    "cpu_count": 20,
+    "use_amp": true
   },
   "data": {
     "source_mode": "feature-fallback",
@@ -44,14 +44,14 @@
     {
       "epoch": 1,
       "steps": 20,
-      "masked_mse": 0.3478160619735718,
-      "epoch_time_sec": 0.9113849000004848
+      "masked_mse": 0.35353143215179444,
+      "epoch_time_sec": 0.5638323000166565
     }
   ],
   "summary": {
-    "total_train_time_sec": 0.9117765999999392,
-    "best_masked_mse": 0.3478160619735718,
-    "final_masked_mse": 0.3478160619735718,
+    "total_train_time_sec": 0.5641796999843791,
+    "best_masked_mse": 0.35353143215179444,
+    "final_masked_mse": 0.35353143215179444,
     "checkpoint_path": null
   }
 }

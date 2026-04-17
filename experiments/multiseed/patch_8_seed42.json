@@ -1,7 +1,7 @@
 {
   "run_name": "ms_patch_8_s42",
-  "started_at": "2026-03-30T12:28:04",
-  "finished_at": "2026-03-30T12:28:07",
+  "started_at": "2026-04-17T21:35:03",
+  "finished_at": "2026-04-17T21:35:04",
   "config": {
     "seed": 42,
     "data_seed": 42,
@@ -27,9 +27,9 @@
     "patch_length": 8
   },
   "system": {
-    "device": "cpu",
-    "cpu_count": 16,
-    "use_amp": false
+    "device": "cuda",
+    "cpu_count": 20,
+    "use_amp": true
   },
   "data": {
     "source_mode": "feature-fallback",
@@ -44,14 +44,14 @@
     {
       "epoch": 1,
       "steps": 20,
-      "masked_mse": 0.4190609365701675,
-      "epoch_time_sec": 2.589360100000704
+      "masked_mse": 0.41744453758001326,
+      "epoch_time_sec": 0.5426685000420548
     }
   ],
   "summary": {
-    "total_train_time_sec": 2.5897259000012127,
-    "best_masked_mse": 0.4190609365701675,
-    "final_masked_mse": 0.4190609365701675,
+    "total_train_time_sec": 0.5430271000368521,
+    "best_masked_mse": 0.41744453758001326,
+    "final_masked_mse": 0.41744453758001326,
     "checkpoint_path": null
   }
 }

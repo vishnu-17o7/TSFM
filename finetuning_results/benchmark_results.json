@@ -1,0 +1,1217 @@
+{
+  "config": {
+    "datasets": [
+      "ETTh1",
+      "ETTh2",
+      "ETTm1",
+      "ETTm2",
+      "Electricity",
+      "Traffic",
+      "Weather"
+    ],
+    "context_length": 512,
+    "forecast_horizon": 96,
+    "stride": 96,
+    "max_test_windows": 256,
+    "models": "both"
+  },
+  "scaling_reconciliation": {
+    "timesfm_internal_normalization": true,
+    "tsfm_train_stat_normalization": true,
+    "metric_domain": "raw_units"
+  },
+  "datasets": {
+    "ETTh1": {
+      "csv_path": "E:\\TSFM\\data\\ETTh1.csv",
+      "target_column": "OT",
+      "freq_bucket": 0,
+      "split": {
+        "policy": "ett_hourly_12m_4m_4m",
+        "train_end": 8640,
+        "val_end": 11520,
+        "test_start": 11520,
+        "n_total": 17420
+      },
+      "num_windows": 61,
+      "models": {
+        "timesfm": {
+          "mse": 7.9163079261779785,
+          "mae": 2.137718439102173,
+          "impl": "timesfm_v1",
+          "normalize_inputs": true
+        },
+        "tsfm::model_pretrained_Beijing_PM25.pt": {
+          "mse": 9.279484748840332,
+          "mae": 2.4062252044677734,
+          "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
+          "mse": 7.673073768615723,
+          "mae": 2.192254066467285,
+          "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_ETTh1.pt": {
+          "mse": 9.937223434448242,
+          "mae": 2.478424310684204,
+          "checkpoint": "finetuning_results\\model_pretrained_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Metro.pt": {
+          "mse": 8.63650131225586,
+          "mae": 2.324573516845703,
+          "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Beijing_PM25.pt": {
+          "mse": 9.252420425415039,
+          "mae": 2.42680287361145,
+          "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
+          "mse": 7.77927303314209,
+          "mae": 2.2077267169952393,
+          "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_ETTh1.pt": {
+          "mse": 10.508722305297852,
+          "mae": 2.5517358779907227,
+          "checkpoint": "finetuning_results\\model_scratch_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Metro.pt": {
+          "mse": 9.915237426757812,
+          "mae": 2.484109878540039,
+          "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.12826156616211,
+          "train_std": 9.176490783691406,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        }
+      }
+    },
+    "ETTh2": {
+      "csv_path": "E:\\TSFM\\data\\ETTh2.csv",
+      "target_column": "OT",
+      "freq_bucket": 0,
+      "split": {
+        "policy": "ett_hourly_12m_4m_4m",
+        "train_end": 8640,
+        "val_end": 11520,
+        "test_start": 11520,
+        "n_total": 17420
+      },
+      "num_windows": 61,
+      "models": {
+        "timesfm": {
+          "mse": 32.51079177856445,
+          "mae": 3.9991281032562256,
+          "impl": "timesfm_v1",
+          "normalize_inputs": true
+        },
+        "tsfm::model_pretrained_Beijing_PM25.pt": {
+          "mse": 40.690887451171875,
+          "mae": 4.968430995941162,
+          "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
+          "mse": 43.35853576660156,
+          "mae": 5.272915363311768,
+          "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_ETTh1.pt": {
+          "mse": 50.645694732666016,
+          "mae": 5.6782331466674805,
+          "checkpoint": "finetuning_results\\model_pretrained_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Metro.pt": {
+          "mse": 50.6615104675293,
+          "mae": 5.645607948303223,
+          "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Beijing_PM25.pt": {
+          "mse": 40.23863220214844,
+          "mae": 5.0633158683776855,
+          "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
+          "mse": 43.13298034667969,
+          "mae": 5.283874988555908,
+          "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_ETTh1.pt": {
+          "mse": 58.41086959838867,
+          "mae": 6.085140228271484,
+          "checkpoint": "finetuning_results\\model_scratch_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Metro.pt": {
+          "mse": 54.12870407104492,
+          "mae": 5.74263858795166,
+          "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.87202262878418,
+          "train_std": 11.58471965789795,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        }
+      }
+    },
+    "ETTm1": {
+      "csv_path": "E:\\TSFM\\data\\ETTm1.csv",
+      "target_column": "OT",
+      "freq_bucket": 0,
+      "split": {
+        "policy": "ett_minutely_12m_4m_4m",
+        "train_end": 34560,
+        "val_end": 46080,
+        "test_start": 46080,
+        "n_total": 69680
+      },
+      "num_windows": 245,
+      "models": {
+        "timesfm": {
+          "mse": 3.525207281112671,
+          "mae": 1.360422968864441,
+          "impl": "timesfm_v1",
+          "normalize_inputs": true
+        },
+        "tsfm::model_pretrained_Beijing_PM25.pt": {
+          "mse": 8.42513370513916,
+          "mae": 2.305237054824829,
+          "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
+          "mse": 6.63042688369751,
+          "mae": 2.0065829753875732,
+          "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_ETTh1.pt": {
+          "mse": 8.129902839660645,
+          "mae": 2.185300350189209,
+          "checkpoint": "finetuning_results\\model_pretrained_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Metro.pt": {
+          "mse": 7.079587936401367,
+          "mae": 2.0667765140533447,
+          "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Beijing_PM25.pt": {
+          "mse": 9.062071800231934,
+          "mae": 2.391160011291504,
+          "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
+          "mse": 6.6234130859375,
+          "mae": 2.0050528049468994,
+          "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_ETTh1.pt": {
+          "mse": 8.952120780944824,
+          "mae": 2.3046765327453613,
+          "checkpoint": "finetuning_results\\model_scratch_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Metro.pt": {
+          "mse": 7.861587047576904,
+          "mae": 2.1787195205688477,
+          "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 17.124948501586914,
+          "train_std": 9.173035621643066,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        }
+      }
+    },
+    "ETTm2": {
+      "csv_path": "E:\\TSFM\\data\\ETTm2.csv",
+      "target_column": "OT",
+      "freq_bucket": 0,
+      "split": {
+        "policy": "ett_minutely_12m_4m_4m",
+        "train_end": 34560,
+        "val_end": 46080,
+        "test_start": 46080,
+        "n_total": 69680
+      },
+      "num_windows": 245,
+      "models": {
+        "timesfm": {
+          "mse": 18.985361099243164,
+          "mae": 2.995461940765381,
+          "impl": "timesfm_v1",
+          "normalize_inputs": true
+        },
+        "tsfm::model_pretrained_Beijing_PM25.pt": {
+          "mse": 74.64876556396484,
+          "mae": 6.759878635406494,
+          "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
+          "mse": 37.50185012817383,
+          "mae": 4.763332366943359,
+          "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_ETTh1.pt": {
+          "mse": 42.70969772338867,
+          "mae": 5.147134780883789,
+          "checkpoint": "finetuning_results\\model_pretrained_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Metro.pt": {
+          "mse": 38.624996185302734,
+          "mae": 4.767600059509277,
+          "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Beijing_PM25.pt": {
+          "mse": 71.1874771118164,
+          "mae": 6.568453788757324,
+          "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
+          "mse": 37.9276123046875,
+          "mae": 4.799964904785156,
+          "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_ETTh1.pt": {
+          "mse": 50.99130630493164,
+          "mae": 5.588969707489014,
+          "checkpoint": "finetuning_results\\model_scratch_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Metro.pt": {
+          "mse": 44.50812530517578,
+          "mae": 5.089450836181641,
+          "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 26.872426986694336,
+          "train_std": 11.5807466506958,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        }
+      }
+    },
+    "Traffic": {
+      "csv_path": "E:\\TSFM\\data\\metro+interstate+traffic+volume\\Metro_Interstate_Traffic_Volume.csv",
+      "target_column": "traffic_volume",
+      "freq_bucket": 0,
+      "split": {
+        "policy": "ratio_70_10_20",
+        "train_end": 33742,
+        "val_end": 38563,
+        "test_start": 38563,
+        "n_total": 48204
+      },
+      "num_windows": 100,
+      "models": {
+        "timesfm": {
+          "mse": 4324857.0,
+          "mae": 1658.8800048828125,
+          "impl": "timesfm_v1",
+          "normalize_inputs": true
+        },
+        "tsfm::model_pretrained_Beijing_PM25.pt": {
+          "mse": 5117523.0,
+          "mae": 1879.1787109375,
+          "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
+          "mse": 4158434.5,
+          "mae": 1767.42724609375,
+          "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_ETTh1.pt": {
+          "mse": 7311396.0,
+          "mae": 2195.2578125,
+          "checkpoint": "finetuning_results\\model_pretrained_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_pretrained_Metro.pt": {
+          "mse": 4245216.0,
+          "mae": 1774.1497802734375,
+          "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Beijing_PM25.pt": {
+          "mse": 10230205.0,
+          "mae": 2614.799072265625,
+          "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
+          "mse": 4399122.0,
+          "mae": 1799.8001708984375,
+          "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_ETTh1.pt": {
+          "mse": 10041301.0,
+          "mae": 2560.33203125,
+          "checkpoint": "finetuning_results\\model_scratch_ETTh1.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        },
+        "tsfm::model_scratch_Metro.pt": {
+          "mse": 4421457.5,
+          "mae": 1800.7113037109375,
+          "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
+          "tsfm_input_normalized": true,
+          "train_mean": 3240.387939453125,
+          "train_std": 1991.6033935546875,
+          "load_meta": {
+            "missing_keys": [],
+            "unexpected_keys": [],
+            "quality": {
+              "total_model_keys": 55,
+              "loaded_keys": 55,
+              "missing_keys_count": 0,
+              "unexpected_keys_count": 0,
+              "load_ratio": 1.0
+            },
+            "inferred_architecture": {
+              "patch_length": 32,
+              "embed_dim": 128,
+              "num_heads": 8,
+              "num_layers": 4,
+              "model_forecast_horizon": 24
+            }
+          }
+        }
+      }
+    }
+  },
+  "aggregate": {
+    "timesfm": {
+      "mean_mse": 864983.9875336171,
+      "mean_mae": 333.8745472669601,
+      "num_datasets": 5
+    },
+    "tsfm::model_pretrained_Beijing_PM25.pt": {
+      "mean_mse": 1023531.2088542938,
+      "mean_mae": 379.12369656562805,
+      "num_datasets": 5
+    },
+    "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
+      "mean_mse": 831705.9327773094,
+      "mean_mae": 356.332466173172,
+      "num_datasets": 5
+    },
+    "tsfm::model_pretrained_ETTh1.pt": {
+      "mean_mse": 1462301.484503746,
+      "mean_mae": 442.14938101768496,
+      "num_datasets": 5
+    },
+    "tsfm::model_pretrained_Metro.pt": {
+      "mean_mse": 849064.2005191803,
+      "mean_mae": 357.79086766242983,
+      "num_datasets": 5
+    },
+    "tsfm::model_scratch_Beijing_PM25.pt": {
+      "mean_mse": 2046066.9481203079,
+      "mean_mae": 526.2497609615326,
+      "num_datasets": 5
+    },
+    "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
+      "mean_mse": 879843.4926557541,
+      "mean_mae": 362.81935806274413,
+      "num_datasets": 5
+    },
+    "tsfm::model_scratch_ETTh1.pt": {
+      "mean_mse": 2008285.972603798,
+      "mean_mae": 515.3725107192993,
+      "num_datasets": 5
+    },
+    "tsfm::model_scratch_Metro.pt": {
+      "mean_mse": 884314.7827307701,
+      "mean_mae": 363.2412445068359,
+      "num_datasets": 5
+    }
+  }
+}

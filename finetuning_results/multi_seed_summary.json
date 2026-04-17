@@ -1,0 +1,86 @@
+{
+  "seeds": [
+    42,
+    7,
+    21
+  ],
+  "dataset_summary": {
+    "Metro": {
+      "mean_mse_improvement_pct": -11.30760390602015,
+      "median_mse_improvement_pct": -16.959936577522804,
+      "all_positive": false,
+      "per_seed": [
+        {
+          "seed": 42,
+          "mse_improvement_pct": -16.959936577522804,
+          "pre_mse": 1.5171504020690918,
+          "scratch_mse": 1.2971539199352264
+        },
+        {
+          "seed": 7,
+          "mse_improvement_pct": 4.559380803450056,
+          "pre_mse": 1.2979137599468231,
+          "scratch_mse": 1.3599175810813904
+        },
+        {
+          "seed": 21,
+          "mse_improvement_pct": -21.5222559439877,
+          "pre_mse": 1.5905981063842773,
+          "scratch_mse": 1.3088944852352142
+        }
+      ]
+    },
+    "Beijing_PM25": {
+      "mean_mse_improvement_pct": -26.1108585972454,
+      "median_mse_improvement_pct": -8.552553789648389,
+      "all_positive": false,
+      "per_seed": [
+        {
+          "seed": 42,
+          "mse_improvement_pct": -8.552553789648389,
+          "pre_mse": 0.7975634932518005,
+          "scratch_mse": 0.734725683927536
+        },
+        {
+          "seed": 7,
+          "mse_improvement_pct": -67.93758131988042,
+          "pre_mse": 1.1443747282028198,
+          "scratch_mse": 0.6814286112785339
+        },
+        {
+          "seed": 21,
+          "mse_improvement_pct": -1.8424406822073875,
+          "pre_mse": 0.6520615816116333,
+          "scratch_mse": 0.6402650773525238
+        }
+      ]
+    },
+    "Environmental_Sensor_Telemetry": {
+      "mean_mse_improvement_pct": -2.3127952203684807,
+      "median_mse_improvement_pct": -3.2621238525301175,
+      "all_positive": false,
+      "per_seed": [
+        {
+          "seed": 42,
+          "mse_improvement_pct": -4.569228971979685,
+          "pre_mse": 2.0434075951576234,
+          "scratch_mse": 1.9541194051504136
+        },
+        {
+          "seed": 7,
+          "mse_improvement_pct": 0.8929671634043598,
+          "pre_mse": 1.982726377248764,
+          "scratch_mse": 2.0005909979343413
+        },
+        {
+          "seed": 21,
+          "mse_improvement_pct": -3.2621238525301175,
+          "pre_mse": 2.0156090378761293,
+          "scratch_mse": 1.9519345164299011
+        }
+      ]
+    }
+  },
+  "overall_mean_mse_improvement_pct": -13.243752574544677,
+  "overall_median_mse_improvement_pct": -4.569228971979685
+}

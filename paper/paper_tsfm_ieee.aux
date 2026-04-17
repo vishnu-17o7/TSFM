@@ -1,0 +1,182 @@
+\relax 
+\citation{brown2020gpt3}
+\citation{devlin2019bert}
+\citation{dosovitskiy2021vit}
+\citation{he2022mae}
+\citation{timesfm}
+\citation{patchtst}
+\citation{informer}
+\citation{autoformer}
+\citation{fedformer}
+\citation{timesfm}
+\citation{salinas2020deepar}
+\citation{oreshkin2020nbeats}
+\citation{lim2021tft}
+\citation{informer}
+\citation{autoformer}
+\citation{fedformer}
+\citation{dlinear}
+\citation{itransformer}
+\citation{patchtst}
+\citation{timesfm}
+\citation{devlin2019bert}
+\citation{he2022mae}
+\citation{revin}
+\citation{box2015}
+\citation{timesfm}
+\citation{timesfm}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Foundation and Transfer Models for Forecasting}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Masked Modeling and Representation Learning}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Normalization and Distribution Shift}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Synthetic Data for Time Series}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Methodological Positioning Relative to Decoder-Only TSFMs}{1}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Methodological Positioning of This Work vs. Decoder-Only TimesFM}}{2}{}\protected@file@percent }
+\newlabel{tab:positioning}{{I}{2}{}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Problem Setup and Notation}{2}{}\protected@file@percent }
+\newlabel{eq:window}{{1}{2}{}{equation.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Assumptions}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Notation Table}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Feature-Bootstrapped Corpus Construction}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Raw Mode}{2}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Notation}}{2}{}\protected@file@percent }
+\newlabel{tab:notation}{{II}{2}{}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Feature-Fallback Mode}{2}{}\protected@file@percent }
+\newlabel{eq:synth}{{2}{2}{}{equation.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Model Architecture}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}RevIN Layer}{2}{}\protected@file@percent }
+\newlabel{eq:revin}{{3}{2}{}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Patch Tokenization}{2}{}\protected@file@percent }
+\newlabel{eq:token_count}{{4}{2}{}{equation.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Masking and Encoder}{2}{}\protected@file@percent }
+\newlabel{eq:masking}{{5}{2}{}{equation.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Objective, Optimization, and Stability}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-A}}Masked Reconstruction Objective}{3}{}\protected@file@percent }
+\newlabel{eq:loss}{{6}{3}{}{equation.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-B}}Estimator Property (Proof Sketch)}{3}{}\protected@file@percent }
+\newlabel{eq:consistency}{{7}{3}{}{equation.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-C}}Gradient Accumulation}{3}{}\protected@file@percent }
+\newlabel{eq:gradacc}{{8}{3}{}{equation.8}{}}
+\newlabel{eq:gradvar}{{9}{3}{}{equation.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VII-D}}Stability Controls}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Complexity Analysis}{3}{}\protected@file@percent }
+\newlabel{eq:layercost}{{10}{3}{}{equation.10}{}}
+\newlabel{eq:encodercost}{{11}{3}{}{equation.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-A}}Patch-Length Scaling Ratios}{3}{}\protected@file@percent }
+\newlabel{eq:ratio}{{12}{3}{}{equation.12}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VIII-B}}Compute-Normalized Objective View}{3}{}\protected@file@percent }
+\newlabel{eq:compute_obj}{{13}{3}{}{equation.13}{}}
+\newlabel{eq:compute_cost}{{14}{3}{}{equation.14}{}}
+\newlabel{eq:tradeoff_rule}{{15}{3}{}{equation.15}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IX}Experimental Protocol}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-A}}Single-Seed Deterministic Baseline}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Fixed Hyperparameters for Both Baseline and Multi-Seed Ablations}}{4}{}\protected@file@percent }
+\newlabel{tab:fixed_hparams}{{III}{4}{}{table.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Single-Seed Baseline: Mask-Ratio Ablation (Patch Length = 16)}}{4}{}\protected@file@percent }
+\newlabel{tab:mask_ablation}{{IV}{4}{}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-B}}Multi-Seed Protocol for Uncertainty}{4}{}\protected@file@percent }
+\newlabel{eq:ci95}{{16}{4}{}{equation.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IX-C}}Ablation Axes}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {X}Results}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-A}}Single-Seed Baseline (Seed = 42)}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Single-Seed Baseline: Patch-Length Ablation (Mask Ratio = 0.4)}}{4}{}\protected@file@percent }
+\newlabel{tab:patch_ablation}{{V}{4}{}{table.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Multi-Seed Mask-Ratio Results ($n=3$, Patch Length = 16)}}{4}{}\protected@file@percent }
+\newlabel{tab:mask_multiseed}{{VI}{4}{}{table.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-B}}Multi-Seed Mask-Ratio Analysis}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-C}}Multi-Seed Patch-Length Analysis}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-D}}Effect-Size View Relative to Baseline Configuration}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-E}}Outlier Reconciliation}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-F}}Compute-Normalized Interpretation}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {VII}{\ignorespaces Multi-Seed Patch-Length Results ($n=3$, Mask Ratio = 0.4)}}{5}{}\protected@file@percent }
+\newlabel{tab:patch_multiseed}{{VII}{5}{}{table.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {VIII}{\ignorespaces Relative Effects vs Baseline $(P=16,\rho =0.4)$}}{5}{}\protected@file@percent }
+\newlabel{tab:effects}{{VIII}{5}{}{table.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-G}}Stability-Efficiency Frontier}{5}{}\protected@file@percent }
+\newlabel{eq:cv_metric}{{17}{5}{}{equation.17}{}}
+\newlabel{eq:sei_metric}{{18}{5}{}{equation.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {X-H}}Final Checkpoint Sweep on Long-Run Training Artifacts}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {IX}{\ignorespaces Derived Stability and Efficiency Metrics from Multi-Seed Aggregates}}{5}{}\protected@file@percent }
+\newlabel{tab:frontier_metrics}{{IX}{5}{}{table.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {X}{\ignorespaces Final-Checkpoint Sweep Summary (15 Checkpoints)}}{5}{}\protected@file@percent }
+\newlabel{tab:checkpoint_sweep_summary}{{X}{5}{}{table.10}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {XI}Resource Footprint Analysis}{5}{}\protected@file@percent }
+\newlabel{eq:attn_mem}{{19}{5}{}{equation.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XI-A}}Patch-Dependent Parameterization and Fairness}{5}{}\protected@file@percent }
+\newlabel{eq:patch_params}{{20}{5}{}{equation.20}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Late-checkpoint objective trajectory (dual-axis): full-token MSE (left axis) and masked MSE (right axis) over global step.}}{6}{}\protected@file@percent }
+\newlabel{fig:checkpoint_trend}{{1}{6}{}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Speed-quality frontier for late checkpoints using masked MSE as quality and token throughput as speed.}}{6}{}\protected@file@percent }
+\newlabel{fig:checkpoint_frontier}{{2}{6}{}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {XII}Step Budget vs. Wall-Clock Budget Interpretation}{6}{}\protected@file@percent }
+\newlabel{eq:step_time}{{21}{6}{}{equation.21}{}}
+\newlabel{eq:wall_steps}{{22}{6}{}{equation.22}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XI}{\ignorespaces Approximate Attention-Map Memory per Forward Pass}}{6}{}\protected@file@percent }
+\newlabel{tab:attn_mem}{{XI}{6}{}{table.11}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XII}{\ignorespaces Measured Parameter Counts Across Patch Settings}}{6}{}\protected@file@percent }
+\newlabel{tab:param_count}{{XII}{6}{}{table.12}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {XIII}Statistical and Methodological Validity}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XIII-A}}Internal Validity}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XIII-B}}Construct Validity}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XIII-C}}Precision Limits}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XIII-D}}Matched-Seed Nonparametric Robustness Check}{6}{}\protected@file@percent }
+\newlabel{eq:friedman}{{23}{6}{}{equation.23}{}}
+\newlabel{eq:kendall_w}{{24}{6}{}{equation.24}{}}
+\citation{timesfm}
+\@writefile{lot}{\contentsline {table}{\numberline {XIII}{\ignorespaces Equivalent Optimizer Steps Under Fixed Wall-Clock Budgets}}{7}{}\protected@file@percent }
+\newlabel{tab:wallclock_steps}{{XIII}{7}{}{table.13}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XIV}{\ignorespaces Friedman Rank Analysis for Patch-Length Settings ($\rho =0.4$)}}{7}{}\protected@file@percent }
+\newlabel{tab:friedman_patch}{{XIV}{7}{}{table.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XIII-E}}Seed-Count Planning}{7}{}\protected@file@percent }
+\newlabel{eq:seed_plan}{{25}{7}{}{equation.25}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XIII-F}}External Validity}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {XIV}Decision Analysis Under Small-Sample Uncertainty}{7}{}\protected@file@percent }
+\newlabel{eq:pairwise_ci}{{27}{7}{}{equation.27}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {XV}Discussion, Limitations, and Threats to Validity}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XV-A}}Scope of Claims}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XV-B}}Synthetic Data Bias}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XV-C}}Budget and Statistical Power}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {XV-D}}Design Implications}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {XVI}Conclusion}{7}{}\protected@file@percent }
+\bibcite{timesfm}{1}
+\bibcite{patchtst}{2}
+\bibcite{revin}{3}
+\bibcite{informer}{4}
+\bibcite{autoformer}{5}
+\bibcite{fedformer}{6}
+\bibcite{dlinear}{7}
+\bibcite{itransformer}{8}
+\bibcite{salinas2020deepar}{9}
+\bibcite{oreshkin2020nbeats}{10}
+\bibcite{lim2021tft}{11}
+\bibcite{godahewa2021monash}{12}
+\bibcite{makridakis2020m4}{13}
+\@writefile{lot}{\contentsline {table}{\numberline {XV}{\ignorespaces Approximate Pairwise Difference Intervals vs Baseline $(P=16,\rho =0.4)$}}{8}{}\protected@file@percent }
+\newlabel{tab:pairwise_ci}{{XV}{8}{}{table.15}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XVI}{\ignorespaces Token Budget per Epoch for Patch-Length Ablation}}{8}{}\protected@file@percent }
+\newlabel{tab:token_budget}{{XVI}{8}{}{table.16}{}}
+\@writefile{toc}{\contentsline {section}{Appendix\nobreakspace  A: Ratio-Estimator Variance Order}{8}{}\protected@file@percent }
+\newlabel{eq:ratio_var_order}{{29}{8}{}{equation.29}{}}
+\@writefile{toc}{\contentsline {section}{Appendix\nobreakspace  B: Processed-Token Budget Accounting}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{Appendix\nobreakspace  C: Raw Multi-Seed Run Matrix}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{Appendix\nobreakspace  D: Seed-Level Ranking Consistency}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{8}{}\protected@file@percent }
+\bibcite{makridakis2022m5}{14}
+\bibcite{vaswani2017}{15}
+\bibcite{devlin2019bert}{16}
+\bibcite{brown2020gpt3}{17}
+\bibcite{dosovitskiy2021vit}{18}
+\bibcite{he2022mae}{19}
+\bibcite{gruver2023llmtime}{20}
+\bibcite{box2015}{21}
+\bibcite{taylor2018prophet}{22}
+\bibcite{bai2018tcn}{23}
+\bibcite{wen2023timellm}{24}
+\bibcite{bergmeir2018}{25}
+\bibcite{petropoulos2022forecasting}{26}
+\@writefile{lot}{\contentsline {table}{\numberline {XVII}{\ignorespaces Per-Run Metrics Used for Aggregate Statistics}}{9}{}\protected@file@percent }
+\newlabel{tab:run_matrix}{{XVII}{9}{}{table.17}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {XVIII}{\ignorespaces Seed-Level Winning Configuration}}{9}{}\protected@file@percent }
+\newlabel{tab:seed_winners}{{XVIII}{9}{}{table.18}{}}
+\gdef \@abspage@last{9}

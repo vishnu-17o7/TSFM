@@ -1,0 +1,63 @@
+{
+  "run_name": "smoke_metrics_validation",
+  "started_at": "2026-03-30T12:04:37",
+  "finished_at": "2026-03-30T12:04:49",
+  "config": {
+    "data_dir": "data",
+    "epochs": 1,
+    "batch_size": 32,
+    "context_length": 512,
+    "patch_length": 16,
+    "embed_dim": 128,
+    "num_heads": 8,
+    "num_layers": 4,
+    "dropout": 0.1,
+    "mask_ratio": 0.4,
+    "stride": 16,
+    "lr": 0.0001,
+    "weight_decay": 0.0001,
+    "num_workers": 0,
+    "seed": 42,
+    "max_steps_per_epoch": 1,
+    "feature_fallback": true,
+    "synthetic_length": 1024,
+    "progress_every_rows": 0,
+    "feature_workers": 2,
+    "max_rows_per_feature_file": 50,
+    "gradient_accumulation_steps": 4,
+    "no_amp": false,
+    "no_compile": true,
+    "save_checkpoint": false,
+    "checkpoint_out": "tsfm_pretrain.pt",
+    "metrics_out": "experiments\\smoke_metrics.json",
+    "run_name": "smoke_metrics_validation"
+  },
+  "system": {
+    "device": "cpu",
+    "cpu_count": 16,
+    "use_amp": false
+  },
+  "data": {
+    "source_mode": "feature-fallback",
+    "loaded_files": 44,
+    "loaded_series": 1927,
+    "total_windows": 63591
+  },
+  "model": {
+    "total_params": 832514
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "steps": 1,
+      "masked_mse": 0.4520426094532013,
+      "epoch_time_sec": 0.3285340999991604
+    }
+  ],
+  "summary": {
+    "total_train_time_sec": 11.113079700000526,
+    "best_masked_mse": 0.4520426094532013,
+    "final_masked_mse": 0.4520426094532013,
+    "checkpoint_path": null
+  }
+}

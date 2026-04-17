@@ -1,0 +1,63 @@
+{
+  "run_name": "mask_0p4",
+  "started_at": "2026-03-30T12:05:51",
+  "finished_at": "2026-03-30T12:06:01",
+  "config": {
+    "data_dir": "data",
+    "epochs": 1,
+    "batch_size": 32,
+    "context_length": 512,
+    "patch_length": 16,
+    "embed_dim": 128,
+    "num_heads": 8,
+    "num_layers": 4,
+    "dropout": 0.1,
+    "mask_ratio": 0.4,
+    "stride": 16,
+    "lr": 0.0001,
+    "weight_decay": 0.0001,
+    "num_workers": 0,
+    "seed": 42,
+    "max_steps_per_epoch": 20,
+    "feature_fallback": true,
+    "synthetic_length": 1024,
+    "progress_every_rows": 0,
+    "feature_workers": 4,
+    "max_rows_per_feature_file": 50,
+    "gradient_accumulation_steps": 4,
+    "no_amp": false,
+    "no_compile": true,
+    "save_checkpoint": false,
+    "checkpoint_out": "tsfm_pretrain.pt",
+    "metrics_out": "experiments\\ablations\\mask_0p4.json",
+    "run_name": "mask_0p4"
+  },
+  "system": {
+    "device": "cpu",
+    "cpu_count": 16,
+    "use_amp": false
+  },
+  "data": {
+    "source_mode": "feature-fallback",
+    "loaded_files": 44,
+    "loaded_series": 1927,
+    "total_windows": 63591
+  },
+  "model": {
+    "total_params": 832514
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "steps": 20,
+      "masked_mse": 0.40364769101142883,
+      "epoch_time_sec": 1.6348197999996046
+    }
+  ],
+  "summary": {
+    "total_train_time_sec": 10.009729899999002,
+    "best_masked_mse": 0.40364769101142883,
+    "final_masked_mse": 0.40364769101142883,
+    "checkpoint_path": null
+  }
+}

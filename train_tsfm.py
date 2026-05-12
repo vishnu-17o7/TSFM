@@ -235,7 +235,7 @@ def _extract_numeric_array(obj) -> np.ndarray:
 def _fast_parse_tsf(path: Path) -> List[np.ndarray]:
     """Custom fast parser for Monash .tsf files, ~100x faster than sktime."""
     out = []
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, 'r', encoding='utf-8', errors='replace') as f:
         in_data = False
         for line in f:
             if in_data:
@@ -260,7 +260,7 @@ def _fast_parse_tsf(path: Path) -> List[np.ndarray]:
 def _fast_parse_ts(path: Path) -> List[np.ndarray]:
     """Custom fast parser for .ts files."""
     out = []
-    with open(path, 'r', encoding='utf-8') as f:
+    with open(path, 'r', encoding='utf-8', errors='replace') as f:
         in_data = False
         for line in f:
             if in_data:

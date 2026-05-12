@@ -718,20 +718,53 @@ def _prepare_payloads(args: argparse.Namespace) -> List[DatasetPayload]:
 
 def _aggregate_metrics(dataset_results: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     by_model: Dict[str, Dict[str, List[float]]] = {}
+    rank_by_model: Dict[str, List[float]] = {}
+    rel_mse_vs_timesfm: Dict[str, List[float]] = {}
+    rel_mae_vs_timesfm: Dict[str, List[float]] = {}
 
     for result in dataset_results.values():
-        for model_key, metrics in result["models"].items():
+        models = result["models"]
+        for model_key, metrics in models.items():
             by_model.setdefault(model_key, {"mse": [], "mae": []})
             by_model[model_key]["mse"].append(metrics["mse"])
             by_model[model_key]["mae"].append(metrics["mae"])
 
+        # Scale-robust ranking per dataset (1 is best/lower error).
+        ranked_mse = sorted(models.items(), key=lambda item: float(item[1]["mse"]))
+        for rank_idx, (model_key, _) in enumerate(ranked_mse, start=1):
+            rank_by_model.setdefault(model_key, []).append(float(rank_idx))
+
+        # Relative metrics against TimesFM within each dataset (unitless).
+        timesfm_metrics = models.get("timesfm")
+        if timesfm_metrics is not None:
+            timesfm_mse = max(float(timesfm_metrics["mse"]), _EPS)
+            timesfm_mae = max(float(timesfm_metrics["mae"]), _EPS)
+            for model_key, metrics in models.items():
+                if model_key == "timesfm":
+                    continue
+                rel_mse_vs_timesfm.setdefault(model_key, []).append(float(metrics["mse"]) / timesfm_mse)
+                rel_mae_vs_timesfm.setdefault(model_key, []).append(float(metrics["mae"]) / timesfm_mae)
+
     out: Dict[str, Any] = {}
     for model_key, values in by_model.items():
-        out[model_key] = {
+        item: Dict[str, Any] = {
             "mean_mse": float(np.mean(values["mse"])),
             "mean_mae": float(np.mean(values["mae"])),
             "num_datasets": len(values["mse"]),
         }
+
+        ranks = rank_by_model.get(model_key, [])
+        if ranks:
+            item["mean_mse_rank"] = float(np.mean(ranks))
+
+        rel_mse_vals = rel_mse_vs_timesfm.get(model_key, [])
+        rel_mae_vals = rel_mae_vs_timesfm.get(model_key, [])
+        if rel_mse_vals and rel_mae_vals:
+            item["mean_rel_mse_vs_timesfm"] = float(np.mean(rel_mse_vals))
+            item["mean_rel_mae_vs_timesfm"] = float(np.mean(rel_mae_vals))
+            item["num_rel_datasets_vs_timesfm"] = len(rel_mse_vals)
+
+        out[model_key] = item
 
     return out
 
@@ -763,8 +796,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--strict-datasets",
-        action="store_true",
-        help="Fail immediately if any dataset is missing or malformed.",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Fail immediately if any dataset is missing or malformed (default: enabled).",
     )
 
     parser.add_argument("--context-length", type=int, default=512)
@@ -1061,12 +1095,20 @@ def main() -> None:
     print("EVALUATION SUMMARY")
     print("=" * 80)
     for model_key, stats in aggregate.items():
-        print(
+        line = (
             f"{model_key:45s} "
             f"mean MSE={stats['mean_mse']:.6f} "
             f"mean MAE={stats['mean_mae']:.6f} "
             f"datasets={stats['num_datasets']}"
         )
+        if "mean_mse_rank" in stats:
+            line += f" mean-rank={stats['mean_mse_rank']:.3f}"
+        if "mean_rel_mse_vs_timesfm" in stats:
+            line += (
+                f" relMSE-vs-timesfm={stats['mean_rel_mse_vs_timesfm']:.3f}"
+                f" relMAE-vs-timesfm={stats['mean_rel_mae_vs_timesfm']:.3f}"
+            )
+        print(line)
     print(f"\n[INFO] Results saved to {args.output_json}")
 
 

@@ -1,7 +1,7 @@
 {
   "run_name": "ms_mask_0p2_s11",
-  "started_at": "2026-03-30T12:27:46",
-  "finished_at": "2026-03-30T12:27:47",
+  "started_at": "2026-04-17T21:34:41",
+  "finished_at": "2026-04-17T21:34:45",
   "config": {
     "seed": 11,
     "data_seed": 11,
@@ -27,9 +27,9 @@
     "patch_length": 16
   },
   "system": {
-    "device": "cpu",
-    "cpu_count": 16,
-    "use_amp": false
+    "device": "cuda",
+    "cpu_count": 20,
+    "use_amp": true
   },
   "data": {
     "source_mode": "feature-fallback",
@@ -44,14 +44,14 @@
     {
       "epoch": 1,
       "steps": 20,
-      "masked_mse": 0.33269992768764495,
-      "epoch_time_sec": 1.619520399999601
+      "masked_mse": 0.33148024380207064,
+      "epoch_time_sec": 4.6252712000277825
     }
   ],
   "summary": {
-    "total_train_time_sec": 1.6200865999999223,
-    "best_masked_mse": 0.33269992768764495,
-    "final_masked_mse": 0.33269992768764495,
+    "total_train_time_sec": 4.626899400027469,
+    "best_masked_mse": 0.33148024380207064,
+    "final_masked_mse": 0.33148024380207064,
     "checkpoint_path": null
   }
 }

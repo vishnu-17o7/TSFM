@@ -1,7 +1,7 @@
 {
   "run_name": "ms_mask_0p4_s42",
-  "started_at": "2026-03-30T12:28:01",
-  "finished_at": "2026-03-30T12:28:03",
+  "started_at": "2026-04-17T21:35:02",
+  "finished_at": "2026-04-17T21:35:03",
   "config": {
     "seed": 42,
     "data_seed": 42,
@@ -27,9 +27,9 @@
     "patch_length": 16
   },
   "system": {
-    "device": "cpu",
-    "cpu_count": 16,
-    "use_amp": false
+    "device": "cuda",
+    "cpu_count": 20,
+    "use_amp": true
   },
   "data": {
     "source_mode": "feature-fallback",
@@ -44,14 +44,14 @@
     {
       "epoch": 1,
       "steps": 20,
-      "masked_mse": 0.40675370693206786,
-      "epoch_time_sec": 1.4714987999996083
+      "masked_mse": 0.40421059280633925,
+      "epoch_time_sec": 0.4653768000425771
     }
   ],
   "summary": {
-    "total_train_time_sec": 1.4720532999999705,
-    "best_masked_mse": 0.40675370693206786,
-    "final_masked_mse": 0.40675370693206786,
+    "total_train_time_sec": 0.46574700000928715,
+    "best_masked_mse": 0.40421059280633925,
+    "final_masked_mse": 0.40421059280633925,
     "checkpoint_path": null
   }
 }

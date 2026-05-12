@@ -41,8 +41,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_Beijing_PM25.pt": {
-          "mse": 9.279484748840332,
-          "mae": 2.4062252044677734,
+          "mse": 9.457442283630371,
+          "mae": 2.468467950820923,
           "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.12826156616211,
@@ -67,8 +67,8 @@
           }
         },
         "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
-          "mse": 7.673073768615723,
-          "mae": 2.192254066467285,
+          "mse": 7.603963375091553,
+          "mae": 2.1822962760925293,
           "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.12826156616211,
@@ -119,8 +119,8 @@
           }
         },
         "tsfm::model_pretrained_Metro.pt": {
-          "mse": 8.63650131225586,
-          "mae": 2.324573516845703,
+          "mse": 8.2841157913208,
+          "mae": 2.277940511703491,
           "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.12826156616211,
@@ -145,8 +145,8 @@
           }
         },
         "tsfm::model_scratch_Beijing_PM25.pt": {
-          "mse": 9.252420425415039,
-          "mae": 2.42680287361145,
+          "mse": 9.395642280578613,
+          "mae": 2.433220624923706,
           "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.12826156616211,
@@ -171,8 +171,8 @@
           }
         },
         "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
-          "mse": 7.77927303314209,
-          "mae": 2.2077267169952393,
+          "mse": 8.08893871307373,
+          "mae": 2.2457492351531982,
           "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.12826156616211,
@@ -223,8 +223,8 @@
           }
         },
         "tsfm::model_scratch_Metro.pt": {
-          "mse": 9.915237426757812,
-          "mae": 2.484109878540039,
+          "mse": 9.415379524230957,
+          "mae": 2.4201154708862305,
           "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.12826156616211,
@@ -270,8 +270,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_Beijing_PM25.pt": {
-          "mse": 40.690887451171875,
-          "mae": 4.968430995941162,
+          "mse": 44.55743408203125,
+          "mae": 5.222928524017334,
           "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.87202262878418,
@@ -296,8 +296,8 @@
           }
         },
         "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
-          "mse": 43.35853576660156,
-          "mae": 5.272915363311768,
+          "mse": 44.415775299072266,
+          "mae": 5.307895660400391,
           "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.87202262878418,
@@ -348,8 +348,8 @@
           }
         },
         "tsfm::model_pretrained_Metro.pt": {
-          "mse": 50.6615104675293,
-          "mae": 5.645607948303223,
+          "mse": 46.099220275878906,
+          "mae": 5.399389743804932,
           "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.87202262878418,
@@ -374,8 +374,8 @@
           }
         },
         "tsfm::model_scratch_Beijing_PM25.pt": {
-          "mse": 40.23863220214844,
-          "mae": 5.0633158683776855,
+          "mse": 38.185455322265625,
+          "mae": 4.946521759033203,
           "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.87202262878418,
@@ -400,8 +400,8 @@
           }
         },
         "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
-          "mse": 43.13298034667969,
-          "mae": 5.283874988555908,
+          "mse": 46.636802673339844,
+          "mae": 5.427635669708252,
           "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.87202262878418,
@@ -452,8 +452,8 @@
           }
         },
         "tsfm::model_scratch_Metro.pt": {
-          "mse": 54.12870407104492,
-          "mae": 5.74263858795166,
+          "mse": 51.15018081665039,
+          "mae": 5.573719024658203,
           "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.87202262878418,
@@ -499,8 +499,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_Beijing_PM25.pt": {
-          "mse": 8.42513370513916,
-          "mae": 2.305237054824829,
+          "mse": 9.735543251037598,
+          "mae": 2.492194890975952,
           "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.124948501586914,
@@ -525,8 +525,8 @@
           }
         },
         "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
-          "mse": 6.63042688369751,
-          "mae": 2.0065829753875732,
+          "mse": 6.574904441833496,
+          "mae": 2.002916097640991,
           "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.124948501586914,
@@ -577,8 +577,8 @@
           }
         },
         "tsfm::model_pretrained_Metro.pt": {
-          "mse": 7.079587936401367,
-          "mae": 2.0667765140533447,
+          "mse": 7.010468006134033,
+          "mae": 2.05791974067688,
           "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.124948501586914,
@@ -603,8 +603,8 @@
           }
         },
         "tsfm::model_scratch_Beijing_PM25.pt": {
-          "mse": 9.062071800231934,
-          "mae": 2.391160011291504,
+          "mse": 8.571639060974121,
+          "mae": 2.325779438018799,
           "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.124948501586914,
@@ -629,8 +629,8 @@
           }
         },
         "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
-          "mse": 6.6234130859375,
-          "mae": 2.0050528049468994,
+          "mse": 6.840603828430176,
+          "mae": 2.027057647705078,
           "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.124948501586914,
@@ -681,8 +681,8 @@
           }
         },
         "tsfm::model_scratch_Metro.pt": {
-          "mse": 7.861587047576904,
-          "mae": 2.1787195205688477,
+          "mse": 7.509065628051758,
+          "mae": 2.1353847980499268,
           "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.124948501586914,
@@ -728,8 +728,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_Beijing_PM25.pt": {
-          "mse": 74.64876556396484,
-          "mae": 6.759878635406494,
+          "mse": 95.1191635131836,
+          "mae": 7.7774128913879395,
           "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.872426986694336,
@@ -754,8 +754,8 @@
           }
         },
         "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
-          "mse": 37.50185012817383,
-          "mae": 4.763332366943359,
+          "mse": 38.68071746826172,
+          "mae": 4.828715801239014,
           "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.872426986694336,
@@ -806,8 +806,8 @@
           }
         },
         "tsfm::model_pretrained_Metro.pt": {
-          "mse": 38.624996185302734,
-          "mae": 4.767600059509277,
+          "mse": 40.25592041015625,
+          "mae": 4.8711113929748535,
           "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.872426986694336,
@@ -832,8 +832,8 @@
           }
         },
         "tsfm::model_scratch_Beijing_PM25.pt": {
-          "mse": 71.1874771118164,
-          "mae": 6.568453788757324,
+          "mse": 57.1877555847168,
+          "mae": 5.773768424987793,
           "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.872426986694336,
@@ -858,8 +858,8 @@
           }
         },
         "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
-          "mse": 37.9276123046875,
-          "mae": 4.799964904785156,
+          "mse": 39.34766387939453,
+          "mae": 4.862753868103027,
           "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.872426986694336,
@@ -910,8 +910,8 @@
           }
         },
         "tsfm::model_scratch_Metro.pt": {
-          "mse": 44.50812530517578,
-          "mae": 5.089450836181641,
+          "mse": 43.620506286621094,
+          "mae": 5.0738348960876465,
           "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.872426986694336,
@@ -938,7 +938,7 @@
       }
     },
     "Traffic": {
-      "csv_path": "E:\\TSFM\\data\\metro+interstate+traffic+volume\\Metro_Interstate_Traffic_Volume.csv",
+      "csv_path": "E:\\TSFM\\data\\traffic.csv",
       "target_column": "traffic_volume",
       "freq_bucket": 0,
       "split": {
@@ -957,8 +957,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_Beijing_PM25.pt": {
-          "mse": 5117523.0,
-          "mae": 1879.1787109375,
+          "mse": 5644863.0,
+          "mae": 1940.2674560546875,
           "checkpoint": "finetuning_results\\model_pretrained_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 3240.387939453125,
@@ -983,8 +983,8 @@
           }
         },
         "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
-          "mse": 4158434.5,
-          "mae": 1767.42724609375,
+          "mse": 4176064.75,
+          "mae": 1770.2872314453125,
           "checkpoint": "finetuning_results\\model_pretrained_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 3240.387939453125,
@@ -1035,8 +1035,8 @@
           }
         },
         "tsfm::model_pretrained_Metro.pt": {
-          "mse": 4245216.0,
-          "mae": 1774.1497802734375,
+          "mse": 4179396.25,
+          "mae": 1766.2506103515625,
           "checkpoint": "finetuning_results\\model_pretrained_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 3240.387939453125,
@@ -1061,8 +1061,8 @@
           }
         },
         "tsfm::model_scratch_Beijing_PM25.pt": {
-          "mse": 10230205.0,
-          "mae": 2614.799072265625,
+          "mse": 7753336.5,
+          "mae": 2264.79345703125,
           "checkpoint": "finetuning_results\\model_scratch_Beijing_PM25.pt",
           "tsfm_input_normalized": true,
           "train_mean": 3240.387939453125,
@@ -1087,8 +1087,8 @@
           }
         },
         "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
-          "mse": 4399122.0,
-          "mae": 1799.8001708984375,
+          "mse": 4278860.0,
+          "mae": 1780.76806640625,
           "checkpoint": "finetuning_results\\model_scratch_Environmental_Sensor_Telemetry.pt",
           "tsfm_input_normalized": true,
           "train_mean": 3240.387939453125,
@@ -1139,8 +1139,8 @@
           }
         },
         "tsfm::model_scratch_Metro.pt": {
-          "mse": 4421457.5,
-          "mae": 1800.7113037109375,
+          "mse": 4604228.5,
+          "mae": 1823.8033447265625,
           "checkpoint": "finetuning_results\\model_scratch_Metro.pt",
           "tsfm_input_normalized": true,
           "train_mean": 3240.387939453125,
@@ -1171,47 +1171,80 @@
     "timesfm": {
       "mean_mse": 864983.9875336171,
       "mean_mae": 333.8745472669601,
-      "num_datasets": 5
+      "num_datasets": 5,
+      "mean_mse_rank": 1.8
     },
     "tsfm::model_pretrained_Beijing_PM25.pt": {
-      "mean_mse": 1023531.2088542938,
-      "mean_mae": 379.12369656562805,
-      "num_datasets": 5
+      "mean_mse": 1129004.373916626,
+      "mean_mae": 391.6456920623779,
+      "num_datasets": 5,
+      "mean_mse_rank": 7.0,
+      "mean_rel_mse_vs_timesfm": 2.3284521699639242,
+      "mean_rel_mae_vs_timesfm": 1.6117375143894352,
+      "num_rel_datasets_vs_timesfm": 5
     },
     "tsfm::model_pretrained_Environmental_Sensor_Telemetry.pt": {
-      "mean_mse": 831705.9327773094,
-      "mean_mae": 356.332466173172,
-      "num_datasets": 5
+      "mean_mse": 835232.4050721169,
+      "mean_mae": 356.9218110561371,
+      "num_datasets": 5,
+      "mean_mse_rank": 1.8,
+      "mean_rel_mse_vs_timesfm": 1.4389668428655544,
+      "mean_rel_mae_vs_timesfm": 1.299911851540077,
+      "num_rel_datasets_vs_timesfm": 5
     },
     "tsfm::model_pretrained_ETTh1.pt": {
       "mean_mse": 1462301.484503746,
       "mean_mae": 442.14938101768496,
-      "num_datasets": 5
+      "num_datasets": 5,
+      "mean_mse_rank": 6.6,
+      "mean_rel_mse_vs_timesfm": 1.8118961723713969,
+      "mean_rel_mae_vs_timesfm": 1.4454466278252198,
+      "num_rel_datasets_vs_timesfm": 5
     },
     "tsfm::model_pretrained_Metro.pt": {
-      "mean_mse": 849064.2005191803,
-      "mean_mae": 357.79086766242983,
-      "num_datasets": 5
+      "mean_mse": 835899.5799448967,
+      "mean_mae": 356.17139434814453,
+      "num_datasets": 5,
+      "mean_mse_rank": 3.8,
+      "mean_rel_mse_vs_timesfm": 1.5079659467643434,
+      "mean_rel_mae_vs_timesfm": 1.3238660494716878,
+      "num_rel_datasets_vs_timesfm": 5
     },
     "tsfm::model_scratch_Beijing_PM25.pt": {
-      "mean_mse": 2046066.9481203079,
-      "mean_mae": 526.2497609615326,
-      "num_datasets": 5
+      "mean_mse": 1550689.9680984498,
+      "mean_mae": 456.0545494556427,
+      "num_datasets": 5,
+      "mean_mse_rank": 6.0,
+      "mean_rel_mse_vs_timesfm": 1.9195774831711276,
+      "mean_rel_mae_vs_timesfm": 1.4754985060825658,
+      "num_rel_datasets_vs_timesfm": 5
     },
     "tsfm::model_scratch_Environmental_Sensor_Telemetry.pt": {
-      "mean_mse": 879843.4926557541,
-      "mean_mae": 362.81935806274413,
-      "num_datasets": 5
+      "mean_mse": 855792.1828018188,
+      "mean_mae": 359.06625256538393,
+      "num_datasets": 5,
+      "mean_mse_rank": 3.6,
+      "mean_rel_mse_vs_timesfm": 1.491736583025993,
+      "mean_rel_mae_vs_timesfm": 1.3189220397544676,
+      "num_rel_datasets_vs_timesfm": 5
     },
     "tsfm::model_scratch_ETTh1.pt": {
       "mean_mse": 2008285.972603798,
       "mean_mae": 515.3725107192993,
-      "num_datasets": 5
+      "num_datasets": 5,
+      "mean_mse_rank": 8.4,
+      "mean_rel_mse_vs_timesfm": 2.1342370423843136,
+      "mean_rel_mae_vs_timesfm": 1.5637199699150444,
+      "num_rel_datasets_vs_timesfm": 5
     },
     "tsfm::model_scratch_Metro.pt": {
-      "mean_mse": 884314.7827307701,
-      "mean_mae": 363.2412445068359,
-      "num_datasets": 5
+      "mean_mse": 920868.0390264511,
+      "mean_mae": 367.8012797832489,
+      "num_datasets": 5,
+      "mean_mse_rank": 6.0,
+      "mean_rel_mse_vs_timesfm": 1.6509966893427699,
+      "mean_rel_mae_vs_timesfm": 1.3777484739670427,
+      "num_rel_datasets_vs_timesfm": 5
     }
   }
 }

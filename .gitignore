@@ -1,2 +1,30 @@
-__pycache__
+__pycache__/
+*.pyc
+*.pyo
 .venv/
+*.egg-info/
+dist/
+build/
+
+# Checkpoints and model weights
+checkpoints/
+*.pt
+!tsfm_pretrain.pt
+
+# Data
+data/
+experiments/multiseed/
+experiments/ablations*/
+experiments/logs*/
+experiments/checkpoint_eval/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pip install logs
+=*

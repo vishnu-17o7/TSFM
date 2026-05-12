@@ -1,5 +1,7 @@
 import argparse
+import copy
 import json
+import math
 import multiprocessing
 import os
 import random
@@ -8,7 +10,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -105,16 +107,21 @@ class TSFMPretrain(nn.Module):
         num_heads: int,
         num_layers: int,
         dropout: float,
+        gradient_checkpointing: bool = False,
     ) -> None:
         super().__init__()
+        self.context_length = context_length
+        self.patch_length = patch_length
+        self.gradient_checkpointing = gradient_checkpointing
         self.revin = RevIN(num_features=1)
         self.patch_embedding = PatchEmbedding(context_length, patch_length, embed_dim)
         self.transformer = TSTransformerBackbone(embed_dim, num_heads, num_layers, dropout=dropout)
         self.mask_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        # Reconstruct raw patch values (not embeddings) for better pretraining signal
         self.reconstruction_head = nn.Sequential(
             nn.Linear(embed_dim, embed_dim),
             nn.GELU(),
-            nn.Linear(embed_dim, embed_dim),
+            nn.Linear(embed_dim, patch_length),
         )
 
     def _apply_mask(self, embedded_patches: torch.Tensor, mask_ratio: float):
@@ -129,16 +136,37 @@ class TSFMPretrain(nn.Module):
 
     def forward(self, x: torch.Tensor, mask_ratio: float) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x_norm = self.revin(x, mode="norm")
-        x_series = x_norm.squeeze(-1)
+        x_series = x_norm.squeeze(-1)  # (B, context_length)
+
+        # Extract raw patches as the reconstruction target
+        B = x_series.shape[0]
+        num_patches = self.patch_embedding.num_patches
+        raw_patches = x_series.reshape(B, num_patches, self.patch_length)  # (B, N, P)
+
         embedded = self.patch_embedding(x_series)
         masked, mask = self._apply_mask(embedded, mask_ratio)
-        encoded = self.transformer(masked)
-        reconstructed = self.reconstruction_head(encoded)
-        return reconstructed, embedded, mask
+
+        if self.gradient_checkpointing and self.training:
+            from torch.utils.checkpoint import checkpoint
+            encoded = checkpoint(self.transformer, masked, use_reentrant=False)
+        else:
+            encoded = self.transformer(masked)
+
+        reconstructed = self.reconstruction_head(encoded)  # (B, N, patch_length)
+        return reconstructed, raw_patches, mask
 
 
 class WindowDataset(Dataset):
-    def __init__(self, series_list: Sequence[np.ndarray], context_length: int, stride: int) -> None:
+    def __init__(
+        self,
+        series_list: Sequence[np.ndarray],
+        context_length: int,
+        stride: int,
+        augment: bool = False,
+        aug_scale_range: Tuple[float, float] = (0.8, 1.2),
+        aug_jitter_std: float = 0.01,
+        aug_cutout_ratio: float = 0.05,
+    ) -> None:
         self.series_list = [s.astype(np.float32, copy=False) for s in series_list if len(s) >= context_length]
         if not self.series_list:
             raise ValueError(
@@ -147,6 +175,10 @@ class WindowDataset(Dataset):
             )
         self.context_length = context_length
         self.stride = stride
+        self.augment = augment
+        self.aug_scale_range = aug_scale_range
+        self.aug_jitter_std = aug_jitter_std
+        self.aug_cutout_ratio = aug_cutout_ratio
 
         self.windows_per_series = [((len(s) - context_length) // stride) + 1 for s in self.series_list]
         self.cumulative = np.cumsum(self.windows_per_series)
@@ -155,6 +187,23 @@ class WindowDataset(Dataset):
     def __len__(self) -> int:
         return self.total_windows
 
+    def _apply_augmentation(self, window: np.ndarray) -> np.ndarray:
+        """Apply random augmentations: scaling, jittering, and cutout."""
+        w = window.copy()
+        # Random scaling
+        scale = np.random.uniform(self.aug_scale_range[0], self.aug_scale_range[1])
+        w = w * scale
+        # Additive jitter
+        std = float(np.std(w))
+        if std > 1e-6:
+            w = w + np.random.normal(0, self.aug_jitter_std * std, size=w.shape).astype(np.float32)
+        # Random cutout (zero out a contiguous segment)
+        cutout_len = int(len(w) * self.aug_cutout_ratio)
+        if cutout_len > 0:
+            start = np.random.randint(0, len(w) - cutout_len + 1)
+            w[start : start + cutout_len] = 0.0
+        return w
+
     def __getitem__(self, idx: int) -> torch.Tensor:
         series_idx = int(np.searchsorted(self.cumulative, idx, side="right"))
         prior = 0 if series_idx == 0 else int(self.cumulative[series_idx - 1])
@@ -162,6 +211,8 @@ class WindowDataset(Dataset):
         start = local_window_idx * self.stride
         series = self.series_list[series_idx]
         window = series[start : start + self.context_length]
+        if self.augment:
+            window = self._apply_augmentation(window)
         return torch.from_numpy(window).unsqueeze(-1)
 
 
@@ -508,9 +559,62 @@ def _write_metrics(metrics_out: Path, payload: dict) -> None:
         json.dump(payload, f, indent=2)
 
 
+class EMA:
+    """Exponential Moving Average of model parameters for smoother convergence."""
+
+    def __init__(self, model: nn.Module, decay: float = 0.999):
+        self.decay = decay
+        self.shadow: Dict[str, torch.Tensor] = {}
+        for k, v in model.state_dict().items():
+            self.shadow[k] = v.clone().detach()
+
+    @torch.no_grad()
+    def update(self, model: nn.Module) -> None:
+        for k, v in model.state_dict().items():
+            if k in self.shadow:
+                self.shadow[k].mul_(self.decay).add_(v.detach(), alpha=1.0 - self.decay)
+
+    def state_dict(self) -> Dict[str, torch.Tensor]:
+        return {k: v.clone() for k, v in self.shadow.items()}
+
+    def apply_to(self, model: nn.Module) -> None:
+        """Replace model weights with EMA shadow weights."""
+        model.load_state_dict(self.shadow, strict=False)
+
+
+def get_cosine_schedule_with_warmup(
+    optimizer: torch.optim.Optimizer,
+    warmup_steps: int,
+    total_steps: int,
+    min_lr_ratio: float = 0.01,
+) -> torch.optim.lr_scheduler.LambdaLR:
+    """Cosine annealing schedule with linear warmup."""
+
+    def lr_lambda(current_step: int) -> float:
+        if current_step < warmup_steps:
+            return float(current_step) / float(max(1, warmup_steps))
+        progress = float(current_step - warmup_steps) / float(max(1, total_steps - warmup_steps))
+        cosine_decay = 0.5 * (1.0 + math.cos(math.pi * progress))
+        return max(min_lr_ratio, cosine_decay)
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Pretrain a simple TSFM with masked patch reconstruction.")
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
+    parser.add_argument(
+        "--real-data-dir",
+        type=Path,
+        default=None,
+        help="Directory with real .tsf/.ts pretraining corpora. Loaded alongside synthetic data.",
+    )
+    parser.add_argument(
+        "--real-data-only",
+        action="store_true",
+        default=False,
+        help="Skip synthetic feature fallback; use only real corpora from --real-data-dir.",
+    )
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--context-length", type=int, default=512)
@@ -580,31 +684,101 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Disable torch.compile (PyTorch 2.0+) model optimization.",
     )
+    parser.add_argument(
+        "--early-stopping-patience",
+        type=int,
+        default=5,
+        help="Stop if val loss does not improve for N epochs (0 = disabled).",
+    )
+    parser.add_argument(
+        "--early-stopping-min-delta",
+        type=float,
+        default=1e-5,
+        help="Minimum improvement in val loss to reset patience counter.",
+    )
+    parser.add_argument(
+        "--best-model-path",
+        type=Path,
+        default=Path("tsfm_best.pt"),
+        help="Path to save the best model checkpoint (by validation loss).",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default="",
+        help="Name for this run (used in metrics output).",
+    )
+    parser.add_argument(
+        "--metrics-out",
+        type=Path,
+        default=None,
+        help="Path to write per-epoch metrics JSON.",
+    )
+    parser.add_argument(
+        "--resume-from",
+        type=str,
+        default=None,
+        help="Path to checkpoint to resume training from.",
+    )
+    parser.add_argument(
+        "--start-epoch",
+        type=int,
+        default=None,
+        help="Override epoch number when resuming.",
+    )
+    parser.add_argument(
+        "--loss-fn",
+        type=str,
+        choices=["mse", "huber"],
+        default="huber",
+        help="Loss function for pretraining (huber is more robust to outliers).",
+    )
+    parser.add_argument(
+        "--gradient-checkpointing",
+        action="store_true",
+        default=False,
+        help="Use gradient checkpointing to trade compute for memory (saves ~40%% VRAM).",
+    )
+    parser.add_argument(
+        "--ema-decay",
+        type=float,
+        default=0.999,
+        help="EMA decay rate for weight averaging (0 = disabled).",
+    )
+    parser.add_argument(
+        "--augment",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable time-series data augmentation during training.",
+    )
     return parser.parse_args()
 
-def validate(model, val_loader, device):
-        model.eval()
-        total_loss = 0.0
-        count = 0
+def validate(model, val_loader, device, mask_ratio=0.5, criterion=None):
+    """Validate the model using the same mask_ratio and loss as training."""
+    if criterion is None:
+        criterion = nn.MSELoss()
+    model.eval()
+    total_loss = 0.0
+    count = 0
 
-        with torch.no_grad():
-            for batch in val_loader:
-                batch = batch.to(device)
+    with torch.no_grad():
+        for batch in val_loader:
+            batch = batch.to(device)
 
-                reconstructed, original, mask = model(batch, mask_ratio = 0.5)
+            reconstructed, original, mask = model(batch, mask_ratio=mask_ratio)
 
-                if mask.sum() == 0:
-                    continue
+            if not mask.any():
+                continue
 
-                preds = reconstructed[mask]
-                targets = original[mask]
+            preds = reconstructed[mask]
+            targets = original[mask]
 
-                loss = nn.functional.mse_loss(preds, targets)
+            loss = criterion(preds, targets)
 
-                total_loss += loss.item()
-                count += 1
+            total_loss += loss.item()
+            count += 1
 
-        return total_loss / max(count, 1)
+    return total_loss / max(count, 1)
 
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
@@ -644,15 +818,57 @@ def main() -> None:
     print(f"Gradient accumulation steps: {args.gradient_accumulation_steps}")
     print(f"Loading datasets from: {args.data_dir}")
 
-    series_list, loaded_files, source_mode = load_all_series(
-        args.data_dir,
-        feature_fallback=args.feature_fallback,
-        synthetic_length=args.synthetic_length,
-        seed=args.seed,
-        progress_every_rows=args.progress_every_rows,
-        feature_workers=args.feature_workers,
-        max_rows_per_feature_file=args.max_rows_per_feature_file,
-    )
+    all_series: List[np.ndarray] = []
+    all_loaded_files: List[Path] = []
+    source_modes: List[str] = []
+
+    if args.real_data_only:
+        args.feature_fallback = False
+
+    if not args.real_data_only:
+        series_list, loaded_files, source_mode = load_all_series(
+            args.data_dir,
+            feature_fallback=args.feature_fallback,
+            synthetic_length=args.synthetic_length,
+            seed=args.seed,
+            progress_every_rows=args.progress_every_rows,
+            feature_workers=args.feature_workers,
+            max_rows_per_feature_file=args.max_rows_per_feature_file,
+        )
+        all_series.extend(series_list)
+        all_loaded_files.extend(loaded_files)
+        source_modes.append(source_mode)
+
+    if args.real_data_dir is not None and args.real_data_dir.exists():
+        print(f"[INFO] Loading real corpora from: {args.real_data_dir}")
+        real_series, real_files, real_mode = load_all_series(
+            args.real_data_dir,
+            feature_fallback=False,
+            synthetic_length=args.synthetic_length,
+            seed=args.seed,
+            progress_every_rows=args.progress_every_rows,
+            feature_workers=args.feature_workers,
+            max_rows_per_feature_file=0,
+        )
+        all_series.extend(real_series)
+        all_loaded_files.extend(real_files)
+        source_modes.append(real_mode)
+        print(f"[INFO] Real corpora: {len(real_series)} series from {len(real_files)} files")
+
+    if not all_series:
+        raise RuntimeError("No series loaded. Check --data-dir and --real-data-dir paths.")
+
+    series_list = all_series
+    loaded_files = all_loaded_files
+
+    if "raw" in source_modes and "feature-fallback" in source_modes:
+        source_mode = "mixed"
+    elif "raw" in source_modes:
+        source_mode = "raw"
+    elif "feature-fallback" in source_modes:
+        source_mode = "feature-fallback"
+    else:
+        source_mode = source_modes[0]
     print(f"Data source mode: {source_mode}")
     print(f"Loaded files: {len(loaded_files)}")
     print(f"Loaded series: {len(series_list)}")
@@ -661,7 +877,12 @@ def main() -> None:
     
     from torch.utils.data import random_split
 
-    dataset = WindowDataset(series_list, context_length=args.context_length, stride=args.stride)
+    dataset = WindowDataset(
+        series_list,
+        context_length=args.context_length,
+        stride=args.stride,
+        augment=args.augment,
+    )
 
     train_size = int(0.95 * len(dataset))
     val_size = len(dataset) - train_size
@@ -697,6 +918,7 @@ def main() -> None:
         num_heads=args.num_heads,
         num_layers=args.num_layers,
         dropout=args.dropout,
+        gradient_checkpointing=args.gradient_checkpointing,
     ).to(device)
 
     # --- torch.compile for graph optimization (PyTorch 2.0+) ---
@@ -709,23 +931,14 @@ def main() -> None:
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scaler = GradScaler("cuda", enabled=use_amp)
-    criterion = nn.MSELoss()
 
-    import math
-
-    def get_cosine_schedule_with_warmup(optimizer, warmup_steps, total_steps, min_lr_ratio=0.1):
-            
-            def lr_lambda(current_step):
-                if current_step < warmup_steps:
-                    return float(current_step) / float(max(1, warmup_steps))
-
-                progress = float(current_step - warmup_steps) / float(max(1, total_steps - warmup_steps))
-                cosine_decay = 0.5 * (1.0 + math.cos(math.pi * progress))
-
-                return max(min_lr_ratio, cosine_decay)
-
-            return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-
+    # --- Loss function selection ---
+    if args.loss_fn == "huber":
+        criterion = nn.SmoothL1Loss(beta=1.0)
+        print("[INFO] Loss function: Huber (SmoothL1Loss, beta=1.0)")
+    else:
+        criterion = nn.MSELoss()
+        print("[INFO] Loss function: MSE")
 
     steps_per_epoch = args.max_steps_per_epoch if args.max_steps_per_epoch > 0 else len(train_loader)
     total_steps = args.epochs * steps_per_epoch
@@ -734,17 +947,31 @@ def main() -> None:
     scheduler = get_cosine_schedule_with_warmup(
         optimizer,
         warmup_steps=warmup_steps,
-        total_steps=total_steps
+        total_steps=total_steps,
     )
 
+    # --- EMA initialization ---
+    ema = None
+    if args.ema_decay > 0:
+        ema = EMA(model, decay=args.ema_decay)
+        print(f"[INFO] EMA enabled with decay={args.ema_decay}")
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Model parameters: {total_params:,}")
     print(f"Total windows: {len(dataset)}")
     print(f"Effective batch size: {args.batch_size * args.gradient_accumulation_steps}")
+    print(f"Augmentation: {args.augment}")
+    print(f"Gradient checkpointing: {args.gradient_checkpointing}")
     print("Starting masked pretraining...")
 
     run_name = args.run_name.strip() or f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    synthetic_series_count = (
+        len(series_list) - (len(all_series) - len(series_list))
+        if args.real_data_dir is not None and args.real_data_dir.exists() and not args.real_data_only
+        else (0 if source_mode == "raw" else len(series_list))
+    )
+    real_series_count = len(series_list) - synthetic_series_count if source_mode in ("mixed", "raw") else 0
+    real_ratio = real_series_count / max(real_series_count + synthetic_series_count, 1) if real_series_count + synthetic_series_count > 0 else 0.0
     metrics_payload = {
         "run_name": run_name,
         "started_at": started_at,
@@ -760,6 +987,11 @@ def main() -> None:
             "loaded_files": len(loaded_files),
             "loaded_series": len(series_list),
             "total_windows": len(dataset),
+            "composition": {
+                "synthetic_series": int(synthetic_series_count),
+                "real_series": int(real_series_count),
+                "real_ratio": float(real_ratio),
+            },
         },
         "model": {
             "total_params": int(total_params),
@@ -803,6 +1035,11 @@ def main() -> None:
     # Create a directory for checkpoints
     checkpoint_dir = Path("checkpoints")
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    best_val_loss = float("inf")
+    best_epoch = 0
+    epochs_without_improvement = 0
+    best_state_dict = None
 
     for epoch in range(start_epoch, args.epochs + 1):
         model.train()
@@ -850,6 +1087,8 @@ def main() -> None:
                 scaler.update()
                 optimizer.zero_grad(set_to_none=True)
                 scheduler.step()
+                if ema is not None:
+                    ema.update(model)
 
             running_loss += loss.item() * accum_steps
             step_count += 1
@@ -858,8 +1097,8 @@ def main() -> None:
             avg_loss = running_loss / step_count
             postfix = {"loss": f"{avg_loss:.4f}", "lr": f"{optimizer.param_groups[0]['lr']:.2e}"}
             if device.type == "cuda":
-                gpu_mb = torch.cuda.memory_allocated() / 1024**2
-                postfix["gpu_mem"] = f"{gpu_mb:.0f}MB"
+                gpu_mb = torch.cuda.max_memory_allocated() / 1024**2
+                postfix["gpu_peak"] = f"{gpu_mb:.0f}MB"
             pbar.set_postfix(postfix)
 
 
@@ -889,23 +1128,93 @@ def main() -> None:
 
         avg_loss = running_loss / max(step_count, 1)
         epoch_time_sec = time.perf_counter() - epoch_start_perf
-        metrics_payload["epochs"].append(
-            {
-                "epoch": epoch,
-                "steps": int(step_count),
-                "masked_mse": float(avg_loss),
-                "epoch_time_sec": float(epoch_time_sec),
-            }
-        )
+
+        # Track GPU peak memory per epoch
+        gpu_peak_mb = None
+        if device.type == "cuda":
+            gpu_peak_mb = float(torch.cuda.max_memory_allocated() / 1024**2)
+            torch.cuda.reset_peak_memory_stats()
+
+        epoch_metrics = {
+            "epoch": epoch,
+            "steps": int(step_count),
+            "masked_mse": float(avg_loss),
+            "epoch_time_sec": float(epoch_time_sec),
+        }
+        if gpu_peak_mb is not None:
+            epoch_metrics["gpu_peak_mb"] = gpu_peak_mb
+
+        metrics_payload["epochs"].append(epoch_metrics)
         if args.metrics_out is not None:
             _write_metrics(args.metrics_out, metrics_payload)
-        print(f"\nEpoch {epoch}/{args.epochs} | Steps {step_count} | Masked MSE {avg_loss:.6f}")
-        val_loss = validate(model, val_loader, device)
+        print(f"\nEpoch {epoch}/{args.epochs} | Steps {step_count} | Train Loss {avg_loss:.6f}")
+
+        # --- Validation with correct mask_ratio and loss fn ---
+        val_loss = validate(model, val_loader, device, mask_ratio=args.mask_ratio, criterion=criterion)
         print(f"Validation Loss: {val_loss:.6f}")
 
+        # Also validate EMA model if enabled
+        ema_val_loss = None
+        if ema is not None:
+            original_state = copy.deepcopy(model.state_dict())
+            ema.apply_to(model)
+            ema_val_loss = validate(model, val_loader, device, mask_ratio=args.mask_ratio, criterion=criterion)
+            model.load_state_dict(original_state)
+            print(f"EMA Validation Loss: {ema_val_loss:.6f}")
+            epoch_metrics["ema_val_loss"] = float(ema_val_loss)
+
+        # Use whichever is better: regular or EMA
+        effective_val_loss = val_loss
+        if ema_val_loss is not None and ema_val_loss < val_loss:
+            effective_val_loss = ema_val_loss
+
+        epoch_metrics["val_loss"] = float(val_loss)
+
+        if effective_val_loss < best_val_loss - args.early_stopping_min_delta:
+            best_val_loss = effective_val_loss
+            best_epoch = epoch
+            epochs_without_improvement = 0
+            # Save the better state (EMA or regular)
+            if ema is not None and ema_val_loss is not None and ema_val_loss < val_loss:
+                best_state_dict = ema.state_dict()
+                best_state_dict = {k: v.cpu() for k, v in best_state_dict.items()}
+            else:
+                best_state_dict = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+            if args.best_model_path is not None:
+                torch.save({
+                    "model_state_dict": best_state_dict,
+                    "epoch": epoch,
+                    "val_loss": effective_val_loss,
+                    "args": vars(args),
+                }, args.best_model_path)
+                print(f"[INFO] New best model saved to {args.best_model_path} (val_loss={effective_val_loss:.6f})")
+        else:
+            epochs_without_improvement += 1
+
+        if args.early_stopping_patience > 0 and epochs_without_improvement >= args.early_stopping_patience:
+            print(f"[INFO] Early stopping triggered at epoch {epoch} (best val_loss={best_val_loss:.6f} at epoch {best_epoch})")
+            break
+
     ckpt_path = Path("tsfm_pretrain.pt")
+    if best_state_dict is not None:
+        model.load_state_dict({k: v.to(device) for k, v in best_state_dict.items()})
     torch.save({"model_state_dict": model.state_dict(), "args": vars(args)}, ckpt_path)
     print(f"Saved checkpoint: {ckpt_path.resolve()}")
+
+    if args.metrics_out is not None:
+        metrics_payload["summary"] = {
+            "best_val_loss": float(best_val_loss),
+            "best_epoch": int(best_epoch),
+            "final_val_loss": float(val_loss),
+            "total_epochs": int(epoch),
+            "early_stopped": bool(epochs_without_improvement >= args.early_stopping_patience > 0),
+            "data_composition": {
+                "synthetic_series": int(synthetic_series_count),
+                "real_series": int(real_series_count),
+                "real_ratio": float(real_ratio),
+            },
+        }
+        _write_metrics(args.metrics_out, metrics_payload)
 
 
 if __name__ == "__main__":

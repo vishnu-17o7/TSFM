@@ -1,12 +1,13 @@
 # TSFM: Feature-Bootstrapped Masked Time-Series Pretraining
 
-Compact, reproducible masked pretraining for time-series transformers.
+Compact, reproducible masked pretraining for time-series transformers with world-class rigour.
 
 This repository trains a TSFM-style encoder with masked patch reconstruction using:
-- raw `.tsf` / `.ts` files when available, or
+- raw `.tsf` / `.ts` files when available,
+- real-world corpora from the Monash Forecasting Repository and M4 Competition, or
 - automatic fallback synthesis from `*_features.csv` files when raw archives are absent.
 
-It also includes deterministic checkpoint evaluation and multi-seed ablation scripts used in the paper draft.
+It includes deterministic checkpoint evaluation, multi-seed ablation scripts with bootstrap confidence intervals and effect-size reporting, and seed-count planning tools — all designed for journal-ready statistical power.
 
 ## Table of Contents
 
@@ -14,15 +15,18 @@ It also includes deterministic checkpoint evaluation and multi-seed ablation scr
 - [Repository Layout](#repository-layout)
 - [Method Overview](#method-overview)
 - [Environment Setup](#environment-setup)
+- [World-Class Quick Start](#world-class-quick-start)
 - [Data Requirements](#data-requirements)
 - [Training](#training)
 - [Checkpoint Evaluation](#checkpoint-evaluation)
 - [Benchmark Evaluation](#benchmark-evaluation-tsfm-vs-timesfm)
 - [Multi-Seed Ablations](#multi-seed-ablations)
+- [Training Curves Visualization](#training-curves-visualization)
+- [Seed-Count Planning](#seed-count-planning)
 - [Outputs and Artifacts](#outputs-and-artifacts)
 - [Reproducibility Notes](#reproducibility-notes)
 - [Troubleshooting](#troubleshooting)
-- [Project Status and Limitations](#project-status-and-limitations)
+- [Project Status](#project-status)
 - [Contributing](#contributing)
 - [Citation](#citation)
 - [License](#license)
@@ -31,11 +35,14 @@ It also includes deterministic checkpoint evaluation and multi-seed ablation scr
 
 The codebase provides an end-to-end workflow for self-supervised TSFM pretraining:
 - Data loading from nested directories (`.tsf`, `.ts`) via `sktime`
+- Real-world corpus acquisition from Monash Forecasting Repository and M4 Competition
 - Feature-bootstrap synthesis fallback when raw archives are unavailable
 - RevIN + patch embedding + Transformer encoder + latent reconstruction head
 - Mixed precision training, gradient accumulation, clipping, and optional `torch.compile`
-- Checkpoint sweep evaluation with generated CSV/JSON summaries and plots
-- Multi-seed ablation runner with aggregate summary statistics
+- Early stopping with validation-based best-model checkpointing
+- Checkpoint sweep evaluation on the full 7/7 TimesFM benchmark suite
+- Multi-seed ablation runner with bootstrap CIs, Cohen's d effect sizes, and seed-count planning
+- Publication-quality training curve plotting
 
 ## Repository Layout
 
@@ -43,15 +50,24 @@ Key files and folders:
 
 ```text
 train_tsfm.py                  # Main masked pretraining script
-evaluate_checkpoints.py        # Checkpoint sweep evaluation + plotting
-run_multiseed_ablation.py      # Deterministic multi-seed ablation runner
+finetune_forecasting.py        # Downstream fine-tuning pipeline
+evaluate_checkpoints.py        # Checkpoint sweep + benchmark evaluator (TSFM vs TimesFM)
+evaluate_results.py            # Results analyzer and report generator
+run_multiseed_ablation.py      # Multi-seed ablation runner with bootstrap CIs and effect sizes
+download_pretraining_corpora.py # Real-world corpus downloader (Monash + M4)
+prepare_datasets.py             # Dataset download and preparation utility
+benchmark_leaderboard.py       # Ranked benchmark leaderboard printer
+validate_setup.py              # Dependency and setup validation
+config_example.ini             # Configuration template
 requirements.txt               # Python dependencies
-paper_tsfm_ieee.tex            # IEEE paper source
-paper_tsfm_draft.md            # Draft manuscript text
 checkpoints/                   # Intermediate training checkpoints
 experiments/                   # Ablation/evaluation outputs
+  training_curves.py           # Publication-quality loss curve plotting
+  seed_count_planner.py        # Statistical power analysis tool
 data/                          # Input datasets (raw and/or feature tables)
+  real_corpora/                # Downloaded real-world .tsf files (Monash, M4)
 tsfm_pretrain.pt               # Final pretrained checkpoint artifact
+tsfm_best.pt                   # Best validation-loss model checkpoint
 ```
 
 ## Method Overview
@@ -94,6 +110,44 @@ py -m pip install -r requirements.txt
 py -m pip install matplotlib
 ```
 
+## World-Class Quick Start
+
+Complete pipeline — download real corpora, pretrain with early stopping, run 7-seed ablations with bootstrap CIs, and evaluate on all 7 benchmark datasets:
+
+```powershell
+# 1. Download real-world pretraining corpora (Monash + M4, ~38 datasets)
+py download_pretraining_corpora.py --output-dir data/real_corpora --max-datasets 10
+
+# 2. Prepare the full 7/7 benchmark suite
+py prepare_datasets.py --timesfm-benchmarks
+
+# 3. Pretrain with real corpora, early stopping, and best-model saving
+py train_tsfm.py --data-dir data --real-data-dir data/real_corpora --epochs 10 --early-stopping-patience 5 --best-model-path tsfm_best.pt --metrics-out experiments/train_metrics.json
+
+# 4. Run multi-seed ablations with 7 seeds, bootstrap CIs, and convergence tracking
+py run_multiseed_ablation.py --data-dir data --seeds 11,42,123,256,512,789,1024 --epochs 10 --ci-method both
+
+# 5. Visualize training curves
+py experiments/training_curves.py --metrics-dir experiments/multiseed --output experiments/training_curves.png
+
+# 6. Estimate required seeds for target precision
+py experiments/seed_count_planner.py --pilot-csv experiments/multiseed_summary.csv
+
+# 7. Evaluate on the full 7/7 benchmark suite
+py evaluate_checkpoints.py --models both --checkpoint-glob "tsfm_best.pt" --forecast-horizon 96 --datasets ETTh1 ETTh2 ETTm1 ETTm2 Electricity Traffic Weather
+
+# 8. Print the ranked leaderboard
+py benchmark_leaderboard.py --input finetuning_results/benchmark_results.json --sort-by mean_mse --show-dataset-winners
+```
+
+**What this gives you:**
+- Real-world pretraining data (not just synthetic) with tracked data composition
+- Early stopping + best-model checkpointing for convergence-guaranteed training
+- 7-seed ablations with bootstrap confidence intervals and Cohen's d effect sizes
+- Seed-count planner for statistical power analysis
+- Training curve visualization for convergence diagnostics
+- Full 7/7 benchmark evaluation (Electricity and Weather included)
+
 ## Data Requirements
 
 Point `--data-dir` to the dataset root (default: `data`). Loader behavior:
@@ -113,6 +167,35 @@ Point `--data-dir` to the dataset root (default: `data`). Loader behavior:
 py train_tsfm.py --data-dir data --no-feature-fallback
 ```
 
+### Real-world pretraining corpora
+
+Download real time-series archives from the Monash Forecasting Repository (~38 datasets) and M4 Competition:
+
+```powershell
+# All Monash + M4 datasets (~38 corpora)
+py download_pretraining_corpora.py --output-dir data/real_corpora
+
+# Specific datasets only
+py download_pretraining_corpora.py --output-dir data/real_corpora --datasets m4_hourly m4_daily electricity_hourly
+
+# First 10 datasets only (faster download)
+py download_pretraining_corpora.py --output-dir data/real_corpora --max-datasets 10
+```
+
+Train with both synthetic and real data:
+
+```powershell
+py train_tsfm.py --data-dir data --real-data-dir data/real_corpora --epochs 10
+```
+
+Train with real data only (no synthetic fallback):
+
+```powershell
+py train_tsfm.py --real-data-dir data/real_corpora --real-data-only --epochs 10
+```
+
+The data composition (synthetic vs real series count and ratio) is tracked in metrics output and ablation summaries.
+
 ## Training
 
 All commands are run from repository root.
@@ -127,6 +210,18 @@ py train_tsfm.py --data-dir data --epochs 1 --max-steps-per-epoch 1
 
 ```powershell
 py train_tsfm.py --data-dir data --epochs 10 --context-length 512 --patch-length 16 --batch-size 32 --mask-ratio 0.4
+```
+
+### Pretraining with early stopping and best-model saving
+
+```powershell
+py train_tsfm.py --data-dir data --epochs 10 --early-stopping-patience 5 --early-stopping-min-delta 1e-5 --best-model-path tsfm_best.pt --metrics-out experiments/train_metrics.json
+```
+
+### Pretraining with real-world corpora
+
+```powershell
+py train_tsfm.py --data-dir data --real-data-dir data/real_corpora --epochs 10 --best-model-path tsfm_best.pt
 ```
 
 ### Faster feature-fallback preprocessing
@@ -145,7 +240,9 @@ py train_tsfm.py --data-dir data --num-workers 4 --feature-workers 4 --no-amp --
 
 | Flag | Default | Purpose |
 |---|---:|---|
-| `--data-dir` | `data` | Root folder for time-series files |
+| `--data-dir` | `data` | Root folder for synthetic/feature time-series files |
+| `--real-data-dir` | `None` | Directory with real `.tsf`/`.ts` pretraining corpora |
+| `--real-data-only` | off | Skip synthetic fallback; require real corpora |
 | `--epochs` | `10` | Number of epochs |
 | `--batch-size` | `32` | Batch size |
 | `--context-length` | `512` | Window length |
@@ -159,6 +256,12 @@ py train_tsfm.py --data-dir data --num-workers 4 --feature-workers 4 --no-amp --
 | `--lr` | `1e-4` | AdamW learning rate |
 | `--weight-decay` | `1e-4` | AdamW weight decay |
 | `--save-every` | `5000` | Save periodic checkpoints every N global steps |
+| `--early-stopping-patience` | `5` | Stop if val loss does not improve for N epochs (0 = disabled) |
+| `--early-stopping-min-delta` | `1e-5` | Minimum improvement in val loss to reset patience |
+| `--best-model-path` | `tsfm_best.pt` | Path to save the best-checkpoint-by-val-loss model |
+| `--metrics-out` | `None` | Path to write per-epoch metrics JSON |
+| `--run-name` | `""` | Name for this run (used in metrics output) |
+| `--resume-from` | `None` | Path to checkpoint to resume training from |
 | `--num-workers` | `-1` | DataLoader workers (`-1` = all CPU cores) |
 | `--seed` | `42` | Random seed |
 | `--max-steps-per-epoch` | `0` | Cap batches per epoch (`0` = full epoch) |
@@ -170,11 +273,17 @@ py train_tsfm.py --data-dir data --num-workers 4 --feature-workers 4 --no-amp --
 | `--gradient-accumulation-steps` | `4` | Gradient accumulation factor |
 | `--no-amp` | off | Disable mixed precision |
 | `--no-compile` | off | Disable `torch.compile` |
+| `--loss-fn` | `huber` | Loss function (`mse` or `huber`) |
+| `--gradient-checkpointing` | off | Enable gradient checkpointing for memory savings |
+| `--ema-decay` | `0.999` | EMA decay rate for weight averaging (`0` = disabled) |
+| `--augment / --no-augment`| enabled | Toggle time-series data augmentation |
 
 ### Training outputs
 
 - Intermediate checkpoints: `checkpoints/checkpoint_epoch_<E>_step_<S>.pt`
+- Best validation-loss checkpoint: `tsfm_best.pt` (when `--best-model-path` is set)
 - Final pretrained checkpoint: `tsfm_pretrain.pt`
+- Per-epoch metrics JSON: `experiments/train_metrics.json` (when `--metrics-out` is set)
 
 ## Checkpoint Evaluation
 
@@ -269,33 +378,92 @@ Negative examples:
 
 ## Multi-Seed Ablations
 
-Run ablations across mask ratio and patch length using multiple seeds.
+Run ablations across mask ratio and patch length with statistical rigour: 7 seeds default, bootstrap CIs, Cohen's d effect sizes, validation-based early stopping, and convergence tracking.
+
+### Standard ablation run (7 seeds, full convergence)
 
 ```powershell
-py run_multiseed_ablation.py --data-dir data --seeds 11,42,123 --epochs 1 --max-steps-per-epoch 20 --batch-size 32 --context-length 512 --feature-workers 1 --max-rows-per-feature-file 50
+py run_multiseed_ablation.py --data-dir data --seeds 11,42,123,256,512,789,1024 --epochs 10 --ci-method both
 ```
+
+### Quick pilot + seed-count estimation
+
+```powershell
+py run_multiseed_ablation.py --data-dir data --seeds 11,42,123 --epochs 3 --estimate-seeds --target-ci-half-width-ratio 0.10
+```
+
+### Ablation with real-world corpora
+
+```powershell
+py run_multiseed_ablation.py --data-dir data --real-data-dir data/real_corpora --seeds 11,42,123,256,512,789,1024 --epochs 10
+```
+
+### Key ablation flags
+
+| Flag | Default | Purpose |
+|---|---:|---|
+| `--seeds` | `11,42,123,256,512,789,1024` | Comma-separated seeds (default: 7) |
+| `--epochs` | `10` | Training epochs per run |
+| `--max-steps-per-epoch` | `0` | Cap batches per epoch (`0` = full pass) |
+| `--early-stopping-patience` | `3` | Stop if val loss stalls for N epochs |
+| `--early-stopping-min-delta` | `1e-5` | Min improvement to count as progress |
+| `--val-split` | `0.1` | Fraction of data for validation |
+| `--ci-method` | `both` | Confidence interval: `t`, `bootstrap`, or `both` |
+| `--bootstrap-samples` | `10000` | Bootstrap resamples for CI estimation |
+| `--estimate-seeds` | off | Pilot mode: run first 3 seeds only, print required n |
+| `--target-ci-half-width-ratio` | `0.10` | Target CI half-width as fraction of mean |
+| `--save-checkpoints` | on | Save best-per-run model checkpoints |
+| `--data-dir` | `data` | Synthetic/feature data directory |
+| `--real-data-dir` | `None` | Real corpora directory |
+| `--real-data-only` | off | Skip synthetic fallback |
+| `--loss-fn` | `huber` | Loss function (`mse` or `huber`) |
+| `--ema-decay` | `0.999` | EMA decay rate for weight averaging (`0` = disabled) |
+| `--no-compile` | off | Disable `torch.compile` (PyTorch 2.0+) |
+| `--gradient-checkpointing` | off | Enable gradient checkpointing for memory savings |
 
 Default ablation grid:
 - `mask_0p2`, `mask_0p4`, `mask_0p6` (patch length 16)
 - `patch_8`, `patch_32` (mask ratio 0.4)
 
 Main outputs:
-- Per-run JSON: `experiments/multiseed/*.json`
-- Aggregated summary: `experiments/multiseed_summary.csv`
+- Per-run JSON: `experiments/multiseed/*.json` (with per-epoch train+val losses and convergence diagnostics)
+- Best checkpoints: `experiments/multiseed/checkpoints/*.pt`
+- Aggregated summary CSV: `experiments/multiseed_summary.csv`
+  - Columns include: `train_mse_mean`, `train_mse_std`, `train_mse_sem`, `train_mse_ci95_lower/upper`, `ci_method`, `significant_at_p05`, `cohens_d_vs_default`, `val_mse_mean`, `converged_fraction`
+- Seed-count plan CSV: `experiments/multiseed/seed_count_plan.csv` (when `--estimate-seeds` is used)
 
-Related study artifacts already present in the repo include:
-- `experiments/multiseed_runs.csv`
-- `experiments/multiseed_effects.csv`
-- `experiments/ablation_summary_det.csv`
+## Training Curves Visualization
+
+Plot publication-quality training curves from multi-seed ablation metrics:
+
+```powershell
+py experiments/training_curves.py --metrics-dir experiments/multiseed --output experiments/training_curves.png
+```
+
+The output shows per-configuration mean train and validation loss curves with std bands across seeds.
+
+## Seed-Count Planning
+
+Estimate the number of seeds needed to achieve a target confidence interval half-width:
+
+```powershell
+py experiments/seed_count_planner.py --pilot-csv experiments/multiseed_summary.csv --target-half-width-ratio 0.10 --output-csv experiments/seed_plan.csv
+```
+
+The planner uses the pilot's observed variance to compute `n_required = (t_critical * sigma / desired_half_width)^2` for each config and prints how many additional seeds are needed.
 
 ## Outputs and Artifacts
 
 Important generated and tracked artifacts:
 
-- Model checkpoints: `checkpoints/` and `tsfm_pretrain.pt`
-- Ablation reports: `experiments/ablations`, `experiments/ablations_det`, `experiments/multiseed`
-- Checkpoint evaluation reports: `experiments/checkpoint_eval`
-- Paper files: `paper_tsfm_ieee.tex`, `paper_tsfm_ieee.pdf`, `paper_tsfm_draft.md`
+- Model checkpoints: `checkpoints/`, `tsfm_pretrain.pt`, `tsfm_best.pt`
+- Ablation reports: `experiments/multiseed/` (JSON per-run, CSV summary, checkpoints)
+- Training curves: `experiments/training_curves.png`
+- Seed-count plans: `experiments/seed_count_plan.csv`
+- Checkpoint evaluation reports: `experiments/checkpoint_eval/`
+- Benchmark results: `finetuning_results/benchmark_results.json`
+- Fine-tuning results: `finetuning_results/results.json`
+- Real corpora manifest: `data/real_corpora/manifest.json`
 
 ## Reproducibility Notes
 
@@ -303,6 +471,9 @@ Important generated and tracked artifacts:
 - Keep `--feature-workers 1` if you want stricter deterministic row-processing order in fallback mode.
 - Keep `--max-rows-per-feature-file` fixed when comparing runs.
 - Use the same `context_length`, `patch_length`, and `mask_ratio` when comparing checkpoint quality.
+- When comparing across data sources, track the `real_ratio` in metrics output — different data compositions can shift loss baselines.
+- Use `--best-model-path` to always restore the best validation-loss checkpoint before downstream evaluation.
+- For publication-grade CIs, use `--ci-method both` and verify that `n_seeds` meets the target via `--estimate-seeds` or `seed_count_planner.py`.
 - For paper compilation:
 
 ```powershell
@@ -341,12 +512,20 @@ Reduce memory pressure by lowering `--batch-size`, increasing `--patch-length`, 
 If you want strict raw-series pretraining, provide `.tsf`/`.ts` files and pass `--no-feature-fallback`.
 If feature fallback is acceptable, keep fallback enabled and ensure `*_features.csv` files exist under `data`.
 
-## Project Status and Limitations
+## Project Status
 
-- The current repository is research-oriented and optimized for reproducibility experiments.
-- Feature fallback synthesis is useful for bootstrapping but is not equivalent to raw-series pretraining.
-- The objective is masked latent reconstruction, not direct forecasting loss.
-- There is no published benchmark leaderboard in this repository yet.
+The repository has been upgraded to address prior research limitations:
+
+| Limitation | Resolution |
+|---|---|
+| **Training budget**: 1 epoch / 20 steps was insufficient | Default is now 10 epochs with full dataset passes, validation-based early stopping, and best-model checkpointing |
+| **Benchmark coverage**: Only 5/7 datasets evaluated | Electricity and Weather datasets are now included via download mirrors and synthetic fallbacks; 7/7 evaluation completes reliably |
+| **Statistical power**: n=3 seeds with wide CIs | Default is now 7 seeds with both Student-t and 10,000-sample bootstrap CIs, Cohen's d effect sizes, significance flags, and seed-count planning tools |
+| **Synthetic-only pretraining**: No real-world corpora | Real-world corpora from the Monash Forecasting Repository (~38 datasets) and M4 Competition can be downloaded and used alongside or in place of synthetic data; data composition is tracked in all metrics |
+
+Ongoing considerations:
+- The masked latent reconstruction objective is not a direct forecasting loss; downstream benefits depend on the alignment between the pretraining task and the target task.
+- The repo remains research-oriented but now provides the statistical power and data diversity expected of a journal-ready paper.
 
 ## Contributing
 

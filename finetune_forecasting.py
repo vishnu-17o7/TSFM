@@ -133,7 +133,7 @@ class TimeSeriesDataModule:
         else:
             df = pd.read_csv(csv_path, index_col=0)
             # Use pm2.5 column, handle NA values
-            pm25_series = df['pm2.5'].fillna(method='ffill').fillna(method='bfill')
+            pm25_series = df['pm2.5'].ffill().bfill()
             data = pm25_series.values.astype(np.float32)
             return data
 

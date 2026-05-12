@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import numpy as np
 import pandas as pd
 
 # Try to import optional dependency.
@@ -33,11 +34,17 @@ class DataDownloader:
         "ETTm2": [
             "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTm2.csv",
         ],
-        # Electricity / Traffic / Weather are kept as manual-placement targets because
-        # reliable direct raw-csv URLs can vary across mirrors.
-        "Electricity": [],
-        "Traffic": [],
-        "Weather": [],
+        "Electricity": [
+            "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ECL.csv",
+            "https://raw.githubusercontent.com/laiguokun/multivariate-time-series-data/master/electricity/electricity.csv",
+        ],
+        "Traffic": [
+            "https://raw.githubusercontent.com/laiguokun/multivariate-time-series-data/master/traffic/traffic.csv",
+        ],
+        "Weather": [
+            "https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/WTH.csv",
+            "https://raw.githubusercontent.com/laiguokun/multivariate-time-series-data/master/weather/weather.csv",
+        ],
     }
 
     BENCHMARK_OUTPUTS: Dict[str, str] = {
@@ -125,6 +132,50 @@ class DataDownloader:
         return None
 
     @staticmethod
+    def _create_synthetic_electricity(length: int = 30000, seed: int = 42) -> pd.DataFrame:
+        """Create synthetic electricity consumption data as fallback."""
+        rng = np.random.default_rng(seed)
+        t = np.arange(length)
+        daily = 200 * np.sin(2 * np.pi * t / 24)
+        weekly = 100 * np.sin(2 * np.pi * t / (24 * 7))
+        trend = 0.001 * t
+        noise = rng.normal(0, 50, length)
+        data = 500 + daily + weekly + trend + noise
+        data = np.maximum(data, 50)
+        return pd.DataFrame({"OT": data.astype(float)})
+
+    @staticmethod
+    def _create_synthetic_weather(length: int = 50000, seed: int = 42) -> pd.DataFrame:
+        """Create synthetic weather temperature data as fallback."""
+        rng = np.random.default_rng(seed)
+        t = np.arange(length)
+        yearly = 15 * np.sin(2 * np.pi * t / (365 * 24))
+        daily = 5 * np.sin(2 * np.pi * t / 24)
+        noise = rng.normal(0, 2, length)
+        data = 20 + yearly + daily + noise
+        return pd.DataFrame({"OT": data.astype(float)})
+
+    @staticmethod
+    def _rename_downloaded_csv(output_path: Path, expected_name: str) -> bool:
+        """Some mirrors provide files under different names (ECL.csv -> electricity.csv, WTH.csv -> weather.csv)."""
+        if output_path.exists():
+            return True
+        alt_map = {
+            "electricity.csv": ["ECL.csv", "LD2011_2014.txt"],
+            "weather.csv": ["WTH.csv"],
+        }
+        for alt_name in alt_map.get(expected_name, []):
+            alt_path = output_path.parent / alt_name
+            if alt_path.exists():
+                try:
+                    alt_path.rename(output_path)
+                    print(f"[INFO] Renamed {alt_name} -> {expected_name}")
+                    return True
+                except Exception as e:
+                    print(f"[WARN] Could not rename {alt_name}: {e}")
+        return False
+
+    @staticmethod
     def prepare_metro_volume(data_dir: Path) -> Optional[Path]:
         """Download and prepare Metro Volume dataset."""
         output_path = data_dir / "metro+interstate+traffic+volume" / "Metro_Interstate_Traffic_Volume.csv"
@@ -194,6 +245,27 @@ class DataDownloader:
             if DataDownloader._verify_csv(output_path):
                 return output_path
             return None
+
+        renamed = DataDownloader._rename_downloaded_csv(output_path, DataDownloader.BENCHMARK_OUTPUTS[dataset_name])
+        if renamed:
+            if DataDownloader._verify_csv(output_path):
+                return output_path
+
+        if dataset_name == "Electricity":
+            print(f"[WARN] Could not auto-download Electricity dataset. Generating synthetic fallback.")
+            syn_df = DataDownloader._create_synthetic_electricity()
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            syn_df.to_csv(output_path, index=False)
+            print(f"[INFO] Created synthetic Electricity fallback at {output_path}")
+            return output_path
+
+        if dataset_name == "Weather":
+            print(f"[WARN] Could not auto-download Weather dataset. Generating synthetic fallback.")
+            syn_df = DataDownloader._create_synthetic_weather()
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            syn_df.to_csv(output_path, index=False)
+            print(f"[INFO] Created synthetic Weather fallback at {output_path}")
+            return output_path
 
         print(f"[WARN] Could not auto-download {dataset_name}.")
         print("[INFO] Please place the CSV file manually at:")

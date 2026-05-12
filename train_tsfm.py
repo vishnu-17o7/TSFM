@@ -244,7 +244,7 @@ def _fast_parse_tsf(path: Path) -> List[np.ndarray]:
                 if not parts:
                     continue
                 vals_str = parts[-1]
-                if not vals_str:
+                if not vals_str or ',' not in vals_str:
                     continue
                 # Replace '?' with 'NaN' so numpy can parse it quickly
                 vals_str = vals_str.replace('?', 'NaN')
@@ -407,10 +407,12 @@ def load_all_series(
     files = tsf_files + ts_files
     
     if exclude_dir is not None and exclude_dir.exists():
-        exclude_path = str(exclude_dir.resolve())
-        files = [p for p in files if not str(p.resolve()).startswith(exclude_path)]
+        exclude_resolved = exclude_dir.resolve()
+        files = [p for p in files if not p.resolve().is_relative_to(exclude_resolved)]
 
-    print(f"[INFO] Found raw files: tsf={len(tsf_files)} ts={len(ts_files)}")
+    tsf_count = sum(1 for p in files if p.suffix.lower() == ".tsf")
+    ts_count = len(files) - tsf_count
+    print(f"[INFO] Found raw files: tsf={tsf_count} ts={ts_count} (after exclude filter)")
 
     all_series: List[np.ndarray] = []
     loaded_files: List[Path] = []
@@ -433,7 +435,7 @@ def load_all_series(
         return all_series, loaded_files, "raw"
 
     if files:
-        raise RuntimeError("Found raw files but could not load any usable numeric series with sktime.")
+        raise RuntimeError("Found raw files but could not load any usable numeric series.")
     if not feature_fallback:
         csv_count = sum(1 for _ in data_dir.rglob("*.csv"))
         raise FileNotFoundError(

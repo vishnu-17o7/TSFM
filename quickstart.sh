@@ -73,6 +73,9 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
         --data-dir data \
         --real-data-dir data/real_corpora \
         --epochs 100 \
+        --batch-size 8192 \
+        --gradient-accumulation-steps 1 \
+        --num-workers 32 \
         --loss-fn huber \
         --ema-decay 0.999 \
         --augment \
@@ -90,6 +93,9 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
         --real-data-dir data/real_corpora \
         --seeds 11,42,123,256,512,789,1024 \
         --epochs 100 \
+        --batch-size 8192 \
+        --gradient-accumulation-steps 1 \
+        --num-workers 32 \
         --early-stopping-patience 10 \
         --loss-fn huber \
         --ema-decay 0.999 \
@@ -146,6 +152,9 @@ elif [ "$1" == "--pretrain" ]; then
         --data-dir data \
         --real-data-dir data/real_corpora \
         --epochs 100 \
+        --batch-size 8192 \
+        --gradient-accumulation-steps 1 \
+        --num-workers 32 \
         --loss-fn huber \
         --ema-decay 0.999 \
         --augment \
@@ -191,6 +200,9 @@ elif [ "$1" == "--ablation" ]; then
         --real-data-dir data/real_corpora \
         --seeds 11,42,123,256,512,789,1024 \
         --epochs 100 \
+        --batch-size 8192 \
+        --gradient-accumulation-steps 1 \
+        --num-workers 32 \
         --early-stopping-patience 10 \
         --loss-fn huber \
         --ema-decay 0.999 \

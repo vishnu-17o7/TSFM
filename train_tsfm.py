@@ -2,7 +2,6 @@ import argparse
 import copy
 import json
 import math
-import multiprocessing
 import os
 import random
 import sys
@@ -10,7 +9,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -789,7 +788,6 @@ def main() -> None:
     args = parse_args()
     set_seed(args.seed)
     started_at = datetime.now().isoformat(timespec="seconds")
-    train_start_perf = time.perf_counter()
 
     if not (0.0 < args.mask_ratio < 1.0):
         raise ValueError("mask_ratio must be between 0 and 1")
@@ -821,6 +819,8 @@ def main() -> None:
     all_series: List[np.ndarray] = []
     all_loaded_files: List[Path] = []
     source_modes: List[str] = []
+    synthetic_series_count = 0
+    real_series_count = 0
 
     if args.real_data_only:
         args.feature_fallback = False
@@ -838,6 +838,7 @@ def main() -> None:
         all_series.extend(series_list)
         all_loaded_files.extend(loaded_files)
         source_modes.append(source_mode)
+        synthetic_series_count += len(series_list)
 
     if args.real_data_dir is not None and args.real_data_dir.exists():
         print(f"[INFO] Loading real corpora from: {args.real_data_dir}")
@@ -853,6 +854,7 @@ def main() -> None:
         all_series.extend(real_series)
         all_loaded_files.extend(real_files)
         source_modes.append(real_mode)
+        real_series_count += len(real_series)
         print(f"[INFO] Real corpora: {len(real_series)} series from {len(real_files)} files")
 
     if not all_series:
@@ -873,21 +875,36 @@ def main() -> None:
     print(f"Loaded files: {len(loaded_files)}")
     print(f"Loaded series: {len(series_list)}")
 
-    print("[INFO] Building sliding-window dataset...")
+    print("[INFO] Building sliding-window datasets...")
     
     from torch.utils.data import random_split
 
-    dataset = WindowDataset(
+    # Create full dataset WITHOUT augmentation for splitting
+    full_dataset = WindowDataset(
+        series_list,
+        context_length=args.context_length,
+        stride=args.stride,
+        augment=False,  # No augmentation on base dataset
+    )
+
+    train_size = int(0.95 * len(full_dataset))
+    val_size = len(full_dataset) - train_size
+
+    train_indices, val_indices = random_split(
+        range(len(full_dataset)), [train_size, val_size]
+    )
+
+    # Create separate datasets: train WITH augmentation, val WITHOUT
+    train_dataset = WindowDataset(
         series_list,
         context_length=args.context_length,
         stride=args.stride,
         augment=args.augment,
     )
-
-    train_size = int(0.95 * len(dataset))
-    val_size = len(dataset) - train_size
-
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    # Use the same base dataset for validation (augment=False)
+    dataset = full_dataset  # for len() reporting below
+    train_dataset = torch.utils.data.Subset(train_dataset, train_indices.indices)
+    val_dataset = torch.utils.data.Subset(full_dataset, val_indices.indices)
 
     print("[INFO] DataLoader initialization...")
     dl_kwargs = dict(
@@ -965,13 +982,7 @@ def main() -> None:
     print("Starting masked pretraining...")
 
     run_name = args.run_name.strip() or f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    synthetic_series_count = (
-        len(series_list) - (len(all_series) - len(series_list))
-        if args.real_data_dir is not None and args.real_data_dir.exists() and not args.real_data_only
-        else (0 if source_mode == "raw" else len(series_list))
-    )
-    real_series_count = len(series_list) - synthetic_series_count if source_mode in ("mixed", "raw") else 0
-    real_ratio = real_series_count / max(real_series_count + synthetic_series_count, 1) if real_series_count + synthetic_series_count > 0 else 0.0
+    real_ratio = real_series_count / max(real_series_count + synthetic_series_count, 1) if (real_series_count + synthetic_series_count) > 0 else 0.0
     metrics_payload = {
         "run_name": run_name,
         "started_at": started_at,
@@ -1009,7 +1020,8 @@ def main() -> None:
     start_epoch = 1
     if args.resume_from and os.path.exists(args.resume_from):
         print(f"[INFO] Loading checkpoint from {args.resume_from}...")
-        checkpoint = torch.load(args.resume_from, map_location=device)
+        # weights_only=False is needed to load optimizer/scheduler state dicts
+        checkpoint = torch.load(args.resume_from, map_location=device, weights_only=False)
         
         # Load states
         model.load_state_dict(checkpoint["model"])

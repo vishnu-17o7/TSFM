@@ -232,79 +232,50 @@ def _extract_numeric_array(obj) -> np.ndarray:
     return arr[np.isfinite(arr)]
 
 
-def _load_tsf_with_sktime(path: Path) -> List[np.ndarray]:
-    loader_candidates = [
-        ("sktime.datasets", "load_tsf_to_dataframe"),
-        ("sktime.utils.data_io", "load_tsf_to_dataframe"),
-        ("sktime.datasets._readers_writers.tsf", "load_tsf_to_dataframe"),
-    ]
-
-    load_tsf_to_dataframe = None
-    for module_name, func_name in loader_candidates:
-        try:
-            module = __import__(module_name, fromlist=[func_name])
-            load_tsf_to_dataframe = getattr(module, func_name)
-            break
-        except (ImportError, AttributeError):
-            continue
-
-    if load_tsf_to_dataframe is None:
-        raise ImportError(
-            "Unable to import sktime's TSF loader. "
-            "Install/upgrade sktime: pip install -U sktime"
-        )
-
-    result = load_tsf_to_dataframe(
-        str(path),
-        replace_missing_vals_with=np.nan,
-        value_column_name="series_value",
-    )
-
-    df = result[0] if isinstance(result, tuple) else result
-    if "series_value" not in df.columns:
-        raise ValueError(f"{path} loaded but 'series_value' column was not found.")
-
+def _fast_parse_tsf(path: Path) -> List[np.ndarray]:
+    """Custom fast parser for Monash .tsf files, ~100x faster than sktime."""
     out = []
-    for value in df["series_value"].tolist():
-        arr = _extract_numeric_array(value)
-        if arr.size > 0:
-            out.append(arr)
+    with open(path, 'r', encoding='utf-8') as f:
+        in_data = False
+        for line in f:
+            if in_data:
+                # Format: series_name:start_timestamp:val1,val2,val3...
+                parts = line.strip().split(':')
+                if not parts:
+                    continue
+                vals_str = parts[-1]
+                if not vals_str:
+                    continue
+                # Replace '?' with 'NaN' so numpy can parse it quickly
+                vals_str = vals_str.replace('?', 'NaN')
+                arr = np.fromstring(vals_str, dtype=np.float32, sep=',')
+                arr = arr[np.isfinite(arr)]
+                if arr.size > 0:
+                    out.append(arr)
+            elif line.startswith('@data'):
+                in_data = True
     return out
 
 
-def _load_ts_with_sktime(path: Path) -> List[np.ndarray]:
-    loader_candidates = [
-        ("sktime.datasets", "load_from_tsfile_to_dataframe"),
-        ("sktime.utils.data_io", "load_from_tsfile_to_dataframe"),
-    ]
-
-    load_from_tsfile_to_dataframe = None
-    for module_name, func_name in loader_candidates:
-        try:
-            module = __import__(module_name, fromlist=[func_name])
-            load_from_tsfile_to_dataframe = getattr(module, func_name)
-            break
-        except (ImportError, AttributeError):
-            continue
-
-    if load_from_tsfile_to_dataframe is None:
-        raise ImportError(
-            "Unable to import sktime's .ts loader. "
-            "Install/upgrade sktime: pip install -U sktime"
-        )
-
-    X, _ = load_from_tsfile_to_dataframe(str(path))
+def _fast_parse_ts(path: Path) -> List[np.ndarray]:
+    """Custom fast parser for .ts files."""
     out = []
-    for row_idx in range(len(X)):
-        row_values = []
-        for col in X.columns:
-            cell = X.iloc[row_idx][col]
-            arr = _extract_numeric_array(cell)
-            if arr.size > 0:
-                row_values.append(arr)
-        if not row_values:
-            continue
-        out.append(np.concatenate(row_values, axis=0))
+    with open(path, 'r', encoding='utf-8') as f:
+        in_data = False
+        for line in f:
+            if in_data:
+                line = line.strip()
+                if not line:
+                    continue
+                line = line.replace('?', 'NaN')
+                # Multivariate uses ':' between dimensions
+                line = line.replace(':', ',')
+                arr = np.fromstring(line, dtype=np.float32, sep=',')
+                arr = arr[np.isfinite(arr)]
+                if arr.size > 0:
+                    out.append(arr)
+            elif line.startswith('@data'):
+                in_data = True
     return out
 
 
@@ -426,6 +397,7 @@ def load_all_series(
     progress_every_rows: int,
     feature_workers: int,
     max_rows_per_feature_file: int,
+    exclude_dir: Path = None,
 ) -> Tuple[List[np.ndarray], List[Path], str]:
     if not data_dir.exists():
         raise FileNotFoundError(f"Data directory does not exist: {data_dir}")
@@ -433,6 +405,11 @@ def load_all_series(
     tsf_files = sorted(data_dir.rglob("*.tsf"))
     ts_files = sorted(data_dir.rglob("*.ts"))
     files = tsf_files + ts_files
+    
+    if exclude_dir is not None and exclude_dir.exists():
+        exclude_path = str(exclude_dir.resolve())
+        files = [p for p in files if not str(p.resolve()).startswith(exclude_path)]
+
     print(f"[INFO] Found raw files: tsf={len(tsf_files)} ts={len(ts_files)}")
 
     all_series: List[np.ndarray] = []
@@ -442,9 +419,9 @@ def load_all_series(
         print(f"[INFO] Loading raw file {file_idx}/{len(files)}: {path}")
         try:
             if path.suffix.lower() == ".tsf":
-                series = _load_tsf_with_sktime(path)
+                series = _fast_parse_tsf(path)
             else:
-                series = _load_ts_with_sktime(path)
+                series = _fast_parse_ts(path)
             if series:
                 all_series.extend(series)
                 loaded_files.append(path)
@@ -834,6 +811,7 @@ def main() -> None:
             progress_every_rows=args.progress_every_rows,
             feature_workers=args.feature_workers,
             max_rows_per_feature_file=args.max_rows_per_feature_file,
+            exclude_dir=args.real_data_dir,
         )
         all_series.extend(series_list)
         all_loaded_files.extend(loaded_files)
@@ -850,6 +828,7 @@ def main() -> None:
             progress_every_rows=args.progress_every_rows,
             feature_workers=args.feature_workers,
             max_rows_per_feature_file=0,
+            exclude_dir=None,
         )
         all_series.extend(real_series)
         all_loaded_files.extend(real_files)

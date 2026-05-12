@@ -65,29 +65,32 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
         || echo -e "${YELLOW}[WARN] Some datasets could not be downloaded (will use synthetic fallback)${NC}"
 
     echo ""
-    echo -e "${GREEN}Step 3: Pretrain TSFM${NC}"
+    echo -e "${GREEN}Step 3: Pretrain TSFM (runs until convergence)${NC}"
     echo "=================================================="
     echo -e "${BLUE}  Loss: Huber | Augmentation: ON | EMA: 0.999 | LR: Cosine w/ warmup${NC}"
+    echo -e "${BLUE}  Epochs: 100 (early stopping patience=10 — will stop when converged)${NC}"
     python train_tsfm.py \
         --data-dir data \
         --real-data-dir data/real_corpora \
-        --epochs 10 \
+        --epochs 100 \
         --loss-fn huber \
         --ema-decay 0.999 \
         --augment \
-        --early-stopping-patience 5 \
+        --early-stopping-patience 10 \
         --best-model-path tsfm_best.pt \
         --metrics-out experiments/train_metrics.json
 
     echo ""
-    echo -e "${GREEN}Step 4: Multi-Seed Ablation (7 seeds)${NC}"
+    echo -e "${GREEN}Step 4: Multi-Seed Ablation (7 seeds, convergence per run)${NC}"
     echo "=================================================="
     echo -e "${BLUE}  Seeds: 11,42,123,256,512,789,1024 | CI: t + bootstrap | Welch + Holm${NC}"
+    echo -e "${BLUE}  Each run: up to 100 epochs, early stopping patience=10${NC}"
     python run_multiseed_ablation.py \
         --data-dir data \
         --real-data-dir data/real_corpora \
         --seeds 11,42,123,256,512,789,1024 \
-        --epochs 10 \
+        --epochs 100 \
+        --early-stopping-patience 10 \
         --loss-fn huber \
         --ema-decay 0.999 \
         --ci-method both
@@ -138,38 +141,38 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
 # ── Individual Commands ──────────────────────────────────────
 
 elif [ "$1" == "--pretrain" ]; then
-    echo -e "${GREEN}Pretraining TSFM (Huber + EMA + Augmentation)${NC}"
+    echo -e "${GREEN}Pretraining TSFM until convergence (Huber + EMA + Augmentation)${NC}"
     python train_tsfm.py \
         --data-dir data \
         --real-data-dir data/real_corpora \
-        --epochs 10 \
+        --epochs 100 \
         --loss-fn huber \
         --ema-decay 0.999 \
         --augment \
-        --early-stopping-patience 5 \
+        --early-stopping-patience 10 \
         --best-model-path tsfm_best.pt \
         --metrics-out experiments/train_metrics.json
 
 elif [ "$1" == "--pretrain-memory-safe" ]; then
-    echo -e "${GREEN}Pretraining TSFM (Gradient Checkpointing + Low Memory)${NC}"
+    echo -e "${GREEN}Pretraining TSFM until convergence (Gradient Checkpointing)${NC}"
     python train_tsfm.py \
         --data-dir data \
         --real-data-dir data/real_corpora \
-        --epochs 10 \
+        --epochs 100 \
         --loss-fn huber \
         --ema-decay 0.999 \
         --augment \
         --gradient-checkpointing \
         --batch-size 16 \
-        --early-stopping-patience 5 \
+        --early-stopping-patience 10 \
         --best-model-path tsfm_best.pt \
         --metrics-out experiments/train_metrics.json
 
 elif [ "$1" == "--pretrain-cpu" ]; then
-    echo -e "${GREEN}Pretraining TSFM (CPU-safe mode)${NC}"
+    echo -e "${GREEN}Pretraining TSFM until convergence (CPU-safe mode)${NC}"
     python train_tsfm.py \
         --data-dir data \
-        --epochs 10 \
+        --epochs 100 \
         --loss-fn huber \
         --no-augment \
         --no-amp \
@@ -177,17 +180,18 @@ elif [ "$1" == "--pretrain-cpu" ]; then
         --batch-size 16 \
         --num-workers 4 \
         --feature-workers 4 \
-        --early-stopping-patience 5 \
+        --early-stopping-patience 10 \
         --best-model-path tsfm_best.pt \
         --metrics-out experiments/train_metrics.json
 
 elif [ "$1" == "--ablation" ]; then
-    echo -e "${GREEN}Running Multi-Seed Ablation (7 seeds)${NC}"
+    echo -e "${GREEN}Running Multi-Seed Ablation (7 seeds, convergence per run)${NC}"
     python run_multiseed_ablation.py \
         --data-dir data \
         --real-data-dir data/real_corpora \
         --seeds 11,42,123,256,512,789,1024 \
-        --epochs 10 \
+        --epochs 100 \
+        --early-stopping-patience 10 \
         --loss-fn huber \
         --ema-decay 0.999 \
         --ci-method both
@@ -197,7 +201,7 @@ elif [ "$1" == "--ablation-pilot" ]; then
     python run_multiseed_ablation.py \
         --data-dir data \
         --seeds 11,42,123 \
-        --epochs 3 \
+        --epochs 5 \
         --loss-fn huber \
         --estimate-seeds \
         --target-ci-half-width-ratio 0.10

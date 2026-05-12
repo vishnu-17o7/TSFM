@@ -705,6 +705,7 @@ def _load_data_for_seed(
             progress_every_rows=args.progress_every_rows,
             feature_workers=args.feature_workers,
             max_rows_per_feature_file=args.max_rows_per_feature_file,
+            exclude_dir=args.real_data_dir,
         )
         series_list.extend(syn_series)
         source_modes.append(syn_mode)
@@ -720,6 +721,7 @@ def _load_data_for_seed(
             progress_every_rows=args.progress_every_rows,
             feature_workers=args.feature_workers,
             max_rows_per_feature_file=0,
+            exclude_dir=None,
         )
         series_list.extend(real_series)
         source_modes.append(real_mode)

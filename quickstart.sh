@@ -53,10 +53,14 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
     echo ""
     echo -e "${GREEN}Step 1: Download Real-World Pretraining Corpora${NC}"
     echo "=================================================="
-    python download_pretraining_corpora.py \
-        --output-dir data/real_corpora \
-        --max-datasets 10 \
-        || echo -e "${YELLOW}[WARN] Some corpora could not be downloaded${NC}"
+    if [ -f "data/real_corpora/manifest.json" ]; then
+        echo -e "${BLUE}[INFO] Corpora already downloaded (manifest.json found). Skipping.${NC}"
+    else
+        python download_pretraining_corpora.py \
+            --output-dir data/real_corpora \
+            --max-datasets 10 \
+            || echo -e "${YELLOW}[WARN] Some corpora could not be downloaded${NC}"
+    fi
 
     echo ""
     echo -e "${GREEN}Step 2: Prepare Benchmark Datasets (7/7)${NC}"

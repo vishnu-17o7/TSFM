@@ -8,6 +8,20 @@ SEEDS=(42 7 21)
 
 for s in "${SEEDS[@]}"; do
   echo "Running seed ${s}"
+
+  # 1. Pretrain with the new flags
+  python train_tsfm.py \
+    --data-dir data \
+    --epochs 10 \
+    --loss-fn huber \
+    --ema-decay 0.999 \
+    --augment \
+    --early-stopping-patience 5 \
+    --best-model-path "tsfm_best_seed${s}.pt" \
+    --metrics-out "experiments/train_metrics_seed${s}.json" \
+    --seed "${s}"
+
+  # 2. Fine-tune on downstream forecasting
   python finetune_forecasting.py \
     --train-from-scratch \
     --pooling flatten \

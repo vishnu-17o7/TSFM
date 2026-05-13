@@ -135,6 +135,7 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
         --models both \
         --checkpoint-glob "finetuning_results/model_pretrained_ETTh1.pt" \
         --forecast-horizon 96 \
+        --context-length 768 \
         --datasets ETTh1 ETTh2 ETTm1 ETTm2 Electricity Traffic Weather
 
     echo ""
@@ -238,6 +239,7 @@ elif [ "$1" == "--benchmark-eval" ]; then
         --models both \
         --checkpoint-glob "finetuning_results/model_pretrained_ETTh1.pt" \
         --forecast-horizon 96 \
+        --context-length 768 \
         --datasets ETTh1 ETTh2 ETTm1 ETTm2 Electricity Traffic Weather
 
 elif [ "$1" == "--eval" ]; then

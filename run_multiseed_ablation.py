@@ -298,7 +298,9 @@ def _run_single(
         if args.max_steps_per_epoch > 0:
             max_steps = min(args.max_steps_per_epoch, total_batches)
 
-        for batch in train_loader:
+        from tqdm import tqdm
+        pbar = tqdm(train_loader, desc=f"  Epoch {epoch}/{args.epochs}", leave=False)
+        for batch in pbar:
             if args.max_steps_per_epoch > 0 and step_count >= args.max_steps_per_epoch:
                 break
 
@@ -327,6 +329,13 @@ def _run_single(
 
             running_loss += loss.item() * accum_steps
             step_count += 1
+            
+            pbar.set_postfix({
+                "loss": f"{loss.item() * accum_steps:.4f}",
+                "lr": f"{scheduler.get_last_lr()[0]:.2e}"
+            })
+
+        pbar.close()
 
         if micro_step % accum_steps != 0:
             scaler.unscale_(optimizer)
@@ -386,6 +395,10 @@ def _run_single(
         if val_loader is not None and epochs_without_improvement >= args.early_stopping_patience:
             print(f"  Early stopping at epoch {epoch} (best val={best_val_loss:.6f} at epoch {best_epoch})")
             break
+            
+        # Print a summary at the end of each epoch so the console isn't entirely blank
+        val_str = f" | val_loss={effective_val:.4f}" if val_loader else ""
+        print(f"  Epoch {epoch}/{args.epochs} | train_loss={avg_train_loss:.4f}{val_str} | time={epoch_time_sec:.1f}s")
 
     elapsed_sec = time.perf_counter() - run_start
 

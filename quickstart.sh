@@ -73,19 +73,23 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
     echo "=================================================="
     echo -e "${BLUE}  Loss: Huber | Augmentation: ON | EMA: 0.999 | LR: Cosine w/ warmup${NC}"
     echo -e "${BLUE}  Epochs: 100 (early stopping patience=10 — will stop when converged)${NC}"
-    python train_tsfm.py \
-        --data-dir data \
-        --real-data-dir data/real_corpora \
-        --epochs 100 \
-        --batch-size 8192 \
-        --gradient-accumulation-steps 1 \
-        --num-workers 32 \
-        --loss-fn huber \
-        --ema-decay 0.999 \
-        --augment \
-        --early-stopping-patience 10 \
-        --best-model-path tsfm_best.pt \
-        --metrics-out experiments/train_metrics.json
+    if [ -f "tsfm_best.pt" ]; then
+        echo -e "${BLUE}[INFO] Pretrained model tsfm_best.pt found. Skipping pretraining.${NC}"
+    else
+        python train_tsfm.py \
+            --data-dir data \
+            --real-data-dir data/real_corpora \
+            --epochs 100 \
+            --batch-size 8192 \
+            --gradient-accumulation-steps 1 \
+            --num-workers 32 \
+            --loss-fn huber \
+            --ema-decay 0.999 \
+            --augment \
+            --early-stopping-patience 10 \
+            --best-model-path tsfm_best.pt \
+            --metrics-out experiments/train_metrics.json
+    fi
 
     echo ""
     echo -e "${GREEN}Step 4: Multi-Seed Ablation (7 seeds, convergence per run)${NC}"
@@ -103,6 +107,7 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
         --early-stopping-patience 10 \
         --loss-fn huber \
         --ema-decay 0.999 \
+        --no-compile \
         --ci-method both
 
     echo ""
@@ -210,6 +215,7 @@ elif [ "$1" == "--ablation" ]; then
         --early-stopping-patience 10 \
         --loss-fn huber \
         --ema-decay 0.999 \
+        --no-compile \
         --ci-method both
 
 elif [ "$1" == "--ablation-pilot" ]; then

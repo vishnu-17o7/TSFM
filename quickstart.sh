@@ -133,7 +133,7 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
     echo "=================================================="
     python evaluate_checkpoints.py \
         --models both \
-        --checkpoint-glob "tsfm_best.pt" \
+        --checkpoint-glob "finetuning_results/model_pretrained_ETTh1.pt" \
         --forecast-horizon 96 \
         --datasets ETTh1 ETTh2 ETTm1 ETTm2 Electricity Traffic Weather
 
@@ -236,7 +236,7 @@ elif [ "$1" == "--benchmark-eval" ]; then
     echo -e "${GREEN}Running Benchmark Evaluation (TSFM vs TimesFM)${NC}"
     python evaluate_checkpoints.py \
         --models both \
-        --checkpoint-glob "tsfm_best.pt" \
+        --checkpoint-glob "finetuning_results/model_pretrained_ETTh1.pt" \
         --forecast-horizon 96 \
         --datasets ETTh1 ETTh2 ETTm1 ETTm2 Electricity Traffic Weather
 

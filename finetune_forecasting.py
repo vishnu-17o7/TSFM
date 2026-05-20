@@ -515,17 +515,31 @@ class TSFMForForecasting(nn.Module):
         else:
             state_dict = checkpoint
 
+        # Strip _orig_mod. prefix added by torch.compile
+        cleaned_state_dict = {}
+        for key, value in state_dict.items():
+            clean_key = key.replace("_orig_mod.", "")
+            cleaned_state_dict[clean_key] = value
+
+        if len(cleaned_state_dict) != len(state_dict):
+            n_stripped = sum(1 for k in state_dict if "_orig_mod." in k)
+            print(f"[INFO] Stripped '_orig_mod.' prefix from {n_stripped} keys (torch.compile artifact)")
+
         # Load only compatible weights
         model_state = self.state_dict()
+        loaded_keys = []
         incompatible_keys = []
-        for key, value in state_dict.items():
+        for key, value in cleaned_state_dict.items():
             if key in model_state and model_state[key].shape == value.shape:
                 model_state[key] = value
+                loaded_keys.append(key)
             else:
                 incompatible_keys.append(key)
 
+        if loaded_keys:
+            print(f"[INFO] Loaded {len(loaded_keys)}/{len(cleaned_state_dict)} compatible keys")
         if incompatible_keys:
-            print(f"[WARN] Incompatible keys: {incompatible_keys[:5]}...")
+            print(f"[WARN] Skipped {len(incompatible_keys)} incompatible keys: {incompatible_keys[:5]}...")
 
         self.load_state_dict(model_state, strict=False)
         print(f"[INFO] Pre-trained weights loaded successfully")

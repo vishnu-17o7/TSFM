@@ -152,6 +152,11 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
     python evaluate_results.py
 
     echo ""
+    echo -e "${GREEN}Step 11: Generate Paper Tables & Figures${NC}"
+    echo "=================================================="
+    python generate_paper_artifacts.py
+
+    echo ""
     echo -e "${GREEN}✓ Full Pipeline Complete!${NC}"
 
 # ── Individual Commands ──────────────────────────────────────
@@ -257,6 +262,10 @@ elif [ "$1" == "--linear-probe-only" ]; then
     echo -e "${GREEN}Running Linear Probe Only (Fast Validation)${NC}"
     python finetune_forecasting.py --linear-probe-epochs 5 --finetune-epochs 0
 
+elif [ "$1" == "--paper-artifacts" ]; then
+    echo -e "${GREEN}Generating Paper Tables & Figures${NC}"
+    python generate_paper_artifacts.py
+
 elif [ "$1" == "--quick" ]; then
     echo -e "${GREEN}Quick Smoke Test (2 epochs, synthetic data)${NC}"
     echo ""
@@ -298,6 +307,7 @@ elif [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
     echo "  --eval                Analyze fine-tuning results and generate plots"
     echo "  --leaderboard         Print ranked benchmark leaderboard"
     echo "  --linear-probe-only   Run linear probe validation (fast)"
+    echo "  --paper-artifacts     Generate all paper tables (.tex) and figures (.png)"
     echo "  --quick               Quick smoke test (1 pretrain epoch + 2 finetune epochs)"
     echo "  --download-data       Download real corpora + benchmark datasets"
     echo "  --help                Show this help message"

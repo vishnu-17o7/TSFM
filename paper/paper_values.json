@@ -180,40 +180,40 @@
       "dataset": "Metro",
       "pretrained_mse": 1.0334240198135376,
       "pretrained_mae": 0.8890909552574158,
-      "scratch_mse": 1.0744439363479614,
-      "scratch_mae": 0.9026760458946228,
-      "improvement_pct": 3.8177810071552605
+      "scratch_mse": 1.074444055557251,
+      "scratch_mae": 0.9026763439178467,
+      "improvement_pct": 3.817791678547535
     },
     {
       "dataset": "Beijing_PM25",
       "pretrained_mse": 0.9428099393844604,
       "pretrained_mae": 0.6925332546234131,
-      "scratch_mse": 0.8079128861427307,
+      "scratch_mse": 0.8079127669334412,
       "scratch_mae": 0.6741048097610474,
-      "improvement_pct": -16.696980027856373
+      "improvement_pct": -16.696997246750108
     },
     {
       "dataset": "Environmental_Sensor_Telemetry",
-      "pretrained_mse": 1.7942382097244263,
-      "pretrained_mae": 1.0533533573150635,
-      "scratch_mse": 1.9413579940795898,
-      "scratch_mae": 1.1016958951950073,
-      "improvement_pct": 7.578189329522086
+      "pretrained_mse": 1.794238233566284,
+      "pretrained_mae": 1.0533533334732055,
+      "scratch_mse": 1.941357970237732,
+      "scratch_mae": 1.1016958713531495,
+      "improvement_pct": 7.578186966385807
     },
     {
       "dataset": "ETTh1",
-      "pretrained_mse": 0.07178722321987152,
+      "pretrained_mse": 0.07178721576929092,
       "pretrained_mae": 0.22655168175697327,
-      "scratch_mse": 0.06997141987085342,
+      "scratch_mse": 0.06997142732143402,
       "scratch_mae": 0.2141203135251999,
-      "improvement_pct": -2.5950643167875307
+      "improvement_pct": -2.5950427443984427
     }
   ],
   "tab_benchmark_per_dataset": [
     {
       "dataset": "ETTh1",
       "best_model": "tsfm::model_pretrained_ETTh1.pt",
-      "mse": 7.651191711425781,
+      "mse": 7.6511921882629395,
       "mae": 2.144468307495117
     },
     {
@@ -231,8 +231,8 @@
     {
       "dataset": "ETTm2",
       "best_model": "timesfm",
-      "mse": 32.37641525268555,
-      "mae": 4.212452411651611
+      "mse": 32.37642288208008,
+      "mae": 4.21245813369751
     },
     {
       "dataset": "Electricity",
@@ -257,12 +257,12 @@
     {
       "dataset": "ETTh1",
       "timesfm_mse": 10.58914566040039,
-      "best_tsfm_mse": 7.651191711425781,
+      "best_tsfm_mse": 7.6511921882629395,
       "winner": "TSFM"
     },
     {
       "dataset": "ETTh2",
-      "timesfm_mse": 57.151126861572266,
+      "timesfm_mse": 57.15113830566406,
       "best_tsfm_mse": 42.75634765625,
       "winner": "TSFM"
     },
@@ -274,25 +274,25 @@
     },
     {
       "dataset": "ETTm2",
-      "timesfm_mse": 32.37641525268555,
+      "timesfm_mse": 32.37642288208008,
       "best_tsfm_mse": 40.525238037109375,
       "winner": "TimesFM"
     },
     {
       "dataset": "Electricity",
-      "timesfm_mse": 57810.66796875,
+      "timesfm_mse": 57810.67578125,
       "best_tsfm_mse": 36495.5390625,
       "winner": "TSFM"
     },
     {
       "dataset": "Traffic",
-      "timesfm_mse": 7129451.5,
+      "timesfm_mse": 7129453.0,
       "best_tsfm_mse": 4421523.5,
       "winner": "TSFM"
     },
     {
       "dataset": "Weather",
-      "timesfm_mse": 46.798091888427734,
+      "timesfm_mse": 46.79808807373047,
       "best_tsfm_mse": 21.7585506439209,
       "winner": "TSFM"
     }

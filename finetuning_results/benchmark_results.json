@@ -41,7 +41,7 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 7.651191711425781,
+          "mse": 7.6511921882629395,
           "mae": 2.144468307495117,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
@@ -82,8 +82,8 @@
       "num_windows": 61,
       "models": {
         "timesfm": {
-          "mse": 57.151126861572266,
-          "mae": 5.8201751708984375,
+          "mse": 57.15113830566406,
+          "mae": 5.820175647735596,
           "impl": "timesfm_v1",
           "normalize_inputs": true
         },
@@ -176,8 +176,8 @@
       "num_windows": 245,
       "models": {
         "timesfm": {
-          "mse": 32.37641525268555,
-          "mae": 4.212452411651611,
+          "mse": 32.37642288208008,
+          "mae": 4.21245813369751,
           "impl": "timesfm_v1",
           "normalize_inputs": true
         },
@@ -223,8 +223,8 @@
       "num_windows": 62,
       "models": {
         "timesfm": {
-          "mse": 57810.66796875,
-          "mae": 202.88218688964844,
+          "mse": 57810.67578125,
+          "mae": 202.88221740722656,
           "impl": "timesfm_v1",
           "normalize_inputs": true
         },
@@ -270,8 +270,8 @@
       "num_windows": 100,
       "models": {
         "timesfm": {
-          "mse": 7129451.5,
-          "mae": 2107.2724609375,
+          "mse": 7129453.0,
+          "mae": 2107.272705078125,
           "impl": "timesfm_v1",
           "normalize_inputs": true
         },
@@ -317,8 +317,8 @@
       "num_windows": 104,
       "models": {
         "timesfm": {
-          "mse": 46.798091888427734,
-          "mae": 5.517657279968262,
+          "mse": 46.79808807373047,
+          "mae": 5.517656326293945,
           "impl": "timesfm_v1",
           "normalize_inputs": true
         },
@@ -353,18 +353,18 @@
   },
   "aggregate": {
     "timesfm": {
-      "mean_mse": 1026773.5367300169,
-      "mean_mae": 332.85600428921833,
+      "mean_mse": 1026773.7521339825,
+      "mean_mae": 332.85604427542006,
       "num_datasets": 7,
       "mean_mse_rank": 1.7142857142857142
     },
     "tsfm::model_pretrained_ETTh1.pt": {
-      "mean_mse": 636876.961886474,
+      "mean_mse": 636876.9618865422,
       "mean_mae": 284.83063868113925,
       "num_datasets": 7,
       "mean_mse_rank": 1.2857142857142858,
-      "mean_rel_mse_vs_timesfm": 0.810414283635623,
-      "mean_rel_mae_vs_timesfm": 0.9181026663871162,
+      "mean_rel_mse_vs_timesfm": 0.810414201117322,
+      "mean_rel_mae_vs_timesfm": 0.918102412132151,
       "num_rel_datasets_vs_timesfm": 7
     }
   }

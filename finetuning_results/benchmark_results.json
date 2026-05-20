@@ -41,8 +41,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 7.6511921882629395,
-          "mae": 2.144468307495117,
+          "mse": 8.054879188537598,
+          "mae": 2.203247308731079,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.12826156616211,
@@ -88,8 +88,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 42.75634765625,
-          "mae": 5.164287090301514,
+          "mse": 42.22319412231445,
+          "mae": 5.118119716644287,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.87202262878418,
@@ -135,8 +135,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 7.002814769744873,
-          "mae": 2.085219144821167,
+          "mse": 7.258169174194336,
+          "mae": 2.1263997554779053,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
           "train_mean": 17.124948501586914,
@@ -182,8 +182,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 40.525238037109375,
-          "mae": 4.979585647583008,
+          "mse": 42.205177307128906,
+          "mae": 5.070828437805176,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
           "train_mean": 26.872426986694336,
@@ -229,8 +229,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 36495.5390625,
-          "mae": 162.36019897460938,
+          "mse": 50652.75390625,
+          "mae": 190.50364685058594,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
           "train_mean": 510.74066162109375,
@@ -276,8 +276,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 4421523.5,
-          "mae": 1813.2908935546875,
+          "mse": 4741916.0,
+          "mae": 1851.785888671875,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
           "train_mean": 3240.387939453125,
@@ -323,8 +323,8 @@
           "normalize_inputs": true
         },
         "tsfm::model_pretrained_ETTh1.pt": {
-          "mse": 21.7585506439209,
-          "mae": 3.789818048477173,
+          "mse": 20.20955467224121,
+          "mae": 3.6584088802337646,
           "checkpoint": "finetuning_results/model_pretrained_ETTh1.pt",
           "tsfm_input_normalized": true,
           "train_mean": 20.01630210876465,
@@ -359,12 +359,12 @@
       "mean_mse_rank": 1.7142857142857142
     },
     "tsfm::model_pretrained_ETTh1.pt": {
-      "mean_mse": 636876.9618865422,
-      "mean_mae": 284.83063868113925,
+      "mean_mse": 684669.8149829592,
+      "mean_mae": 294.3523628030504,
       "num_datasets": 7,
       "mean_mse_rank": 1.2857142857142858,
-      "mean_rel_mse_vs_timesfm": 0.810414201117322,
-      "mean_rel_mae_vs_timesfm": 0.918102412132151,
+      "mean_rel_mse_vs_timesfm": 0.8650444948996828,
+      "mean_rel_mae_vs_timesfm": 0.945716565298942,
       "num_rel_datasets_vs_timesfm": 7
     }
   }

@@ -1,26 +1,26 @@
 {
   "Metro": {
-    "test_mse": 1.0334240198135376,
-    "test_mae": 0.8890909552574158,
+    "test_mse": 1.0263221263885498,
+    "test_mae": 0.8853369951248169,
     "scratch_test_mse": 1.074444055557251,
     "scratch_test_mae": 0.9026763439178467
   },
   "Beijing_PM25": {
-    "test_mse": 0.9428099393844604,
-    "test_mae": 0.6925332546234131,
+    "test_mse": 0.9337430000305176,
+    "test_mae": 0.6857615113258362,
     "scratch_test_mse": 0.8079127669334412,
     "scratch_test_mae": 0.6741048097610474
   },
   "Environmental_Sensor_Telemetry": {
-    "test_mse": 1.794238233566284,
-    "test_mae": 1.0533533334732055,
+    "test_mse": 1.7842694640159606,
+    "test_mae": 1.0507551074028014,
     "scratch_test_mse": 1.941357970237732,
     "scratch_test_mae": 1.1016958713531495
   },
   "ETTh1": {
-    "test_mse": 0.07178721576929092,
-    "test_mae": 0.22655168175697327,
-    "scratch_test_mse": 0.06997142732143402,
-    "scratch_test_mae": 0.2141203135251999
+    "test_mse": 0.06841117888689041,
+    "test_mae": 0.2214188575744629,
+    "scratch_test_mse": 0.06997141242027283,
+    "scratch_test_mae": 0.21412035822868347
   }
 }

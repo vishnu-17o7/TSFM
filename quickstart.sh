@@ -126,7 +126,7 @@ if [ "$1" == "--all" ] || [ "$1" == "" ]; then
     echo ""
     echo -e "${GREEN}Step 7: Fine-Tune for Forecasting${NC}"
     echo "=================================================="
-    python finetune_forecasting.py --train-from-scratch
+    python finetune_forecasting.py --train-from-scratch --pretrained-model tsfm_best.pt
 
     echo ""
     echo -e "${GREEN}Step 8: Benchmark Evaluation (TSFM vs TimesFM)${NC}"
@@ -236,7 +236,7 @@ elif [ "$1" == "--ablation-pilot" ]; then
 
 elif [ "$1" == "--finetune" ]; then
     echo -e "${GREEN}Running Fine-Tuning Pipeline${NC}"
-    python finetune_forecasting.py --train-from-scratch
+    python finetune_forecasting.py --train-from-scratch --pretrained-model tsfm_best.pt
 
 elif [ "$1" == "--benchmark-eval" ]; then
     echo -e "${GREEN}Running Benchmark Evaluation (TSFM vs TimesFM)${NC}"

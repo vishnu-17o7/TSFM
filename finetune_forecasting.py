@@ -455,46 +455,53 @@ class TSFMForForecasting(nn.Module):
             checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
         except Exception as e1:
             try:
-                # Fallback: use safe_globals context manager for pathlib objects
+                # Fallback 2: use safe_globals context manager (PyTorch 2.6+)
                 import pathlib
                 import torch.serialization
-                
-                # Allow pathlib classes that might be in the checkpoint
-                import types
-                import sys
 
-                def _ensure_local():
-                    if hasattr(pathlib, '_local'):
-                        return pathlib._local
-                    if 'pathlib._local' in sys.modules:
-                        return sys.modules['pathlib._local']
-                    local_mod = types.ModuleType('pathlib._local')
-                    local_mod.Path = pathlib.Path
-                    local_mod.PosixPath = pathlib.PosixPath
-                    local_mod.WindowsPath = pathlib.WindowsPath
-                    sys.modules['pathlib._local'] = local_mod
-                    setattr(pathlib, '_local', local_mod)
-                    return local_mod
+                if hasattr(torch.serialization, 'safe_globals'):
+                    import types
+                    import sys
 
-                safe_classes = []
-                for cls_name in [
-                    'Path', 'PosixPath', 'WindowsPath',
-                    'PurePath', 'PurePosixPath', 'PureWindowsPath',
-                ]:
-                    if hasattr(pathlib, cls_name):
-                        safe_classes.append(getattr(pathlib, cls_name))
-                local_module = _ensure_local()
-                for cls_name in ['Path', 'PosixPath', 'WindowsPath']:
-                    if hasattr(local_module, cls_name):
-                        safe_classes.append(getattr(local_module, cls_name))
+                    def _ensure_local():
+                        if hasattr(pathlib, '_local'):
+                            return pathlib._local
+                        if 'pathlib._local' in sys.modules:
+                            return sys.modules['pathlib._local']
+                        local_mod = types.ModuleType('pathlib._local')
+                        local_mod.Path = pathlib.Path
+                        local_mod.PosixPath = pathlib.PosixPath
+                        local_mod.WindowsPath = pathlib.WindowsPath
+                        sys.modules['pathlib._local'] = local_mod
+                        setattr(pathlib, '_local', local_mod)
+                        return local_mod
 
-                with torch.serialization.safe_globals(safe_classes):
+                    safe_classes = []
+                    for cls_name in [
+                        'Path', 'PosixPath', 'WindowsPath',
+                        'PurePath', 'PurePosixPath', 'PureWindowsPath',
+                    ]:
+                        if hasattr(pathlib, cls_name):
+                            safe_classes.append(getattr(pathlib, cls_name))
+                    local_module = _ensure_local()
+                    for cls_name in ['Path', 'PosixPath', 'WindowsPath']:
+                        if hasattr(local_module, cls_name):
+                            safe_classes.append(getattr(local_module, cls_name))
+
+                    with torch.serialization.safe_globals(safe_classes):
+                        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+                else:
+                    # Fallback 3: older PyTorch (<2.6) — load directly
                     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
-                    
+
             except Exception as e2:
-                print(f"[WARN] Could not load pre-trained weights: {e2}")
-                print(f"[WARN] Will train model from scratch")
-                return
+                try:
+                    # Final fallback: plain unsafe load (PyTorch <2.0 compat)
+                    checkpoint = torch.load(checkpoint_path, map_location=device)
+                except Exception as e3:
+                    print(f"[WARN] Could not load pre-trained weights: {e3}")
+                    print(f"[WARN] Will train model from scratch")
+                    return
 
         if checkpoint is None:
             print(f"[WARN] Checkpoint is None, training from scratch")

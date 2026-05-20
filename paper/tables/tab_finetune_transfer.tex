@@ -1,8 +1,12 @@
+\begin{tabular}{lccccc}
 \toprule
-Dataset & Pretrained MSE & Pretrained MAE & Scratch MSE & Scratch MAE & Improvement \\
+\multirow{2}{*}{Dataset} & \multicolumn{2}{c}{Pre-trained} & \multicolumn{2}{c}{From Scratch} & \multirow{2}{*}{$\Delta$(\%)} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+ & MSE & MAE & MSE & MAE & \\
 \midrule
-Metro & 1.026322 & 0.885337 & 1.074444 & 0.902676 & +4.48\% \\
-Beijing_PM25 & 0.933743 & 0.685762 & 0.807913 & 0.674105 & -15.57\% \\
-Environmental_Sensor_Telemetry & 1.784269 & 1.050755 & 1.941358 & 1.101696 & +8.09\% \\
-ETTh1 & 0.068411 & 0.221419 & 0.069971 & 0.214120 & +2.23\% \\
+Metro          & \textbf{1.0263} & 0.8853 & 1.0744          & 0.9027 & $+4.48$  \\
+Beijing PM2.5  & 0.9338          & 0.6858 & \textbf{0.8079} & 0.6741 & $-15.57$ \\
+Env.\ Sensor   & \textbf{1.7843} & 1.0508 & 1.9414          & 1.1017 & $+8.09$  \\
+ETTh1          & \textbf{0.0684} & 0.2214 & 0.0700          & 0.2141 & $+2.23$  \\
 \bottomrule
+\end{tabular}

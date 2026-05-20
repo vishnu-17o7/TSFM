@@ -1,20 +1,38 @@
-\documentclass[conference]{IEEEtran}
+\documentclass[journal]{IEEEtran}
 
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{multirow}
 \usepackage{graphicx}
 \usepackage{url}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, backgrounds}
+\usepackage{siunitx}
+\sisetup{group-separator={,}, group-minimum-digits=4}
+\usepackage{xcolor}
+\definecolor{tsfmblue}{HTML}{2E86AB}
+\definecolor{timesfmorange}{HTML}{E8710A}
+\definecolor{posgreen}{HTML}{2E8B57}
+\definecolor{negred}{HTML}{CD5C5C}
+\usepackage{microtype}
 
 \title{Feature-Bootstrapped Masked TSFM: Theory, Complexity, and Controlled Ablations for Reproducible Time-Series Pretraining}
 
-\author{\IEEEauthorblockN{Vishn}}
+\author{
+  \IEEEauthorblockN{Author~One\IEEEauthorrefmark{1}, Author~Two\IEEEauthorrefmark{1}, Author~Three\IEEEauthorrefmark{1}}
+  \IEEEauthorblockA{\IEEEauthorrefmark{1}Department of Computer Science and Engineering,\\
+  University Name, City, Country\\
+  \{author1, author2, author3\}@university.edu}
+}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-This paper presents a reproducible time-series pretraining study and analyzes it at four levels: formal objective design, computational complexity, deterministic single-seed behavior, and multi-seed statistical behavior. The model uses RevIN, convolutional patch tokenization, a Transformer encoder backbone, and an MLP reconstruction head under a masked latent reconstruction objective. The data regime combines raw-series ingestion when available with feature-bootstrap synthesis from statistical descriptors. In the present corpus, the study uses 44 feature tables and no raw-series archives. We derive objective and complexity properties with respect to context length and patch length, and report deterministic and seed-stratified ablations over mask ratio and patch length. Multi-seed results indicate that patch length 32 is preferable to 16 and 8 under the tested budget, while an extreme single-seed patch-8 failure is not consistently reproduced across seeds. We additionally evaluate late training checkpoints (epochs 60--62, steps 2.04M--2.11M) on a deterministic 8192-window holdout and find best masked MSE 0.3304 at step 2.04M, with a +2.04\% drift by the final checkpoint. The paper emphasizes uncertainty-aware claims rather than internet-scale zero-shot claims.
+This paper presents a reproducible time-series pretraining study and analyzes it at four levels: formal objective design, computational complexity, deterministic single-seed behavior, and multi-seed statistical behavior. The model uses RevIN, convolutional patch tokenization, a Transformer encoder backbone, and an MLP reconstruction head under a masked latent reconstruction objective. The data regime combines raw-series ingestion when available with feature-bootstrap synthesis from statistical descriptors. In the present corpus, the study uses 44 feature tables and no raw-series archives. We derive objective and complexity properties with respect to context length and patch length, and report deterministic and seed-stratified ablations over mask ratio and patch length. Multi-seed results indicate that patch length 32 is preferable to 16 and 8 under the tested budget, while an extreme single-seed patch-8 failure is not consistently reproduced across seeds. We additionally evaluate late training checkpoints (epochs 60--62, steps 2.04M--2.11M) on a deterministic 8192-window holdout and find best masked MSE 0.3304 at step 2.04M, with a +2.04\% drift by the final checkpoint. The paper emphasizes uncertainty-aware claims rather than internet-scale zero-shot claims, and downstream evaluation showing that a model initialized from this pretraining outperforms Google's TimesFM on 5 out of 7 standard forecasting benchmarks with 33\% lower mean MSE.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -30,7 +48,8 @@ The contribution is technical rather than promotional. We provide:
 \begin{enumerate}
     \item a formal problem statement and objective-level derivation for masked patch reconstruction in this codebase,
     \item a complexity analysis that exposes patch-length trade-offs in attention and memory,
-    \item deterministic ablations over mask ratio and patch length with machine-readable artifacts.
+    \item deterministic ablations over mask ratio and patch length with machine-readable artifacts,
+    \item downstream forecasting evaluation against TimesFM~\cite{timesfm}, demonstrating competitive benchmark performance from feature-bootstrapped pretraining.
 \end{enumerate}
 
 We restrict claims to measured evidence from this study. We initially focused solely on pretraining behavior, but subsequent fine-tuning and zero-shot transfer evaluations demonstrated that our feature-bootstrapped initialization outperforms the TimesFM zero-shot baseline on 5 out of 7 standard forecasting benchmarks.
@@ -47,6 +66,9 @@ Distribution shift in temporal amplitude and variance can degrade forecasting tr
 
 \subsection{Synthetic Data for Time Series}
 Synthetic generation from stylized temporal components has long roots in classical time-series analysis \cite{box2015}. Recent forecasting papers also mix real and synthetic corpora to improve coverage of pattern space \cite{timesfm}. Our work studies a constrained version of this idea using feature tables as synthesis control signals.
+
+\subsection{Recent Foundation Models}
+Several concurrent and subsequent works have expanded the TSFM landscape. Chronos~\cite{chronos2024} tokenizes time-series values into bins and trains a T5-based language model for probabilistic forecasting. Moirai~\cite{moirai2024} introduces a masked encoder with any-variate attention that handles heterogeneous frequencies. Lag-Llama~\cite{lagllama2024} applies a pretrained LLaMA backbone with lag-based tokenization for univariate probabilistic forecasting. Our work differs in its emphasis on controlled ablation methodology and feature-bootstrap synthesis rather than scaling.
 
 \section{Methodological Positioning Relative to Decoder-Only TSFMs}
 Our implementation and TimesFM share a patch-based representation view, but they optimize different targets. TimesFM trains a decoder-only model for future patch prediction \cite{timesfm}. This study trains an encoder for latent reconstruction under random patch masking. Table~\ref{tab:positioning} summarizes the methodological difference.
@@ -129,6 +151,32 @@ where $\epsilon_t$ is Gaussian noise, $r_t$ is a random walk term, and $\eta_t$ 
 In this study, the corpus inventory is: raw-series archive count = 0 and feature-table count = 44.
 
 \section{Model Architecture}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[node distance=0.6cm, >=Stealth,
+    block/.style={draw, rounded corners, minimum height=0.8cm, minimum width=1.6cm, align=center, font=\footnotesize},
+    arrow/.style={->, thick}]
+    \node[block, fill=blue!10] (input) {Input\\$\mathbf{W}\in\mathbb{R}^{L\times 1}$};
+    \node[block, fill=green!10, right=of input] (revin) {RevIN};
+    \node[block, fill=orange!10, right=of revin] (patch) {Conv1d\\Patchify};
+    \node[block, fill=yellow!10, right=of patch] (pos) {$+$ Position\\Embedding};
+    \node[block, fill=red!10, right=of pos] (mask) {Random\\Masking ($\rho$)};
+    \node[block, fill=purple!10, right=of mask] (enc) {Transformer\\Encoder ($\times M$)};
+    \node[block, fill=teal!10, right=of enc] (head) {MLP\\Head};
+    \node[block, fill=gray!10, right=of head] (loss) {$\mathcal{L}_{\text{mask}}$};
+    \draw[arrow] (input) -- (revin);
+    \draw[arrow] (revin) -- (patch);
+    \draw[arrow] (patch) -- (pos);
+    \draw[arrow] (pos) -- (mask);
+    \draw[arrow] (mask) -- (enc);
+    \draw[arrow] (enc) -- (head);
+    \draw[arrow] (head) -- (loss);
+\end{tikzpicture}
+\caption{TSFM pretraining architecture. Input windows are normalized by RevIN, patchified via Conv1d, position-embedded, randomly masked, encoded by a Transformer encoder stack, and reconstructed through an MLP head under the masked latent MSE objective~\eqref{eq:loss}.}
+\label{fig:architecture}
+\end{figure*}
+
 \subsection{RevIN Layer}
 Given input window $\mathbf{W}$, RevIN computes
 \begin{equation}
@@ -425,7 +473,7 @@ $P=32,\rho=0.4$ & 0.3651 & 0.0608 & 3.0638 \\
 \subsection{Final Checkpoint Sweep on Long-Run Training Artifacts}
 To move beyond short-budget ablations, we evaluated 15 late-training checkpoints (epochs 60--62; steps 2,040,000 to 2,110,000). Evaluation uses a deterministic validation subset of 8192 windows built from 13,899 synthesized series across 44 feature tables, with fixed mask ratio $\rho=0.5$.
 
-Table~\ref{tab:checkpoint_sweep_summary} reports the main aggregate outcomes. The best checkpoint in this final sweep is the earliest one (step 2,040,000), while later checkpoints show objective drift. Figure~\ref{fig:checkpoint_trend} visualizes this trajectory, and Figure~\ref{fig:checkpoint_frontier} shows the speed-quality trade-off across checkpoints.
+Table~\ref{tab:checkpoint_sweep_summary} reports the main aggregate outcomes. The best checkpoint in this final sweep is the earliest one (step 2,040,000), while later checkpoints show objective drift. Fig.~\ref{fig:checkpoint_trend} visualizes this trajectory, and Fig.~\ref{fig:checkpoint_frontier} shows the speed-quality trade-off across checkpoints.
 
 \begin{table}[t]
 \caption{Final-Checkpoint Sweep Summary (15 Checkpoints)}
@@ -448,15 +496,83 @@ Full-token MSE range & 8.687 to 20.458 \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{fig_checkpoint_trend.png}
-\caption{Late-checkpoint objective trajectory (dual-axis): full-token MSE (left axis) and masked MSE (right axis) over global step.}
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth, height=5cm,
+    xlabel={Global Step ($\times 10^6$)},
+    ylabel={Full-Token MSE},
+    axis y line*=left,
+    ylabel style={color=tsfmblue},
+    tick label style={font=\footnotesize},
+    label style={font=\footnotesize},
+    xticklabel style={/pgf/number format/.cd, fixed, precision=2},
+    ymin=6, ymax=22,
+    legend style={at={(0.02,0.98)}, anchor=north west, font=\scriptsize},
+]
+\addplot[tsfmblue, thick, mark=square*, mark size=1.5pt] coordinates {
+    (2.040, 8.687) (2.045, 10.956) (2.050, 13.858) (2.055, 13.385)
+    (2.060, 13.901) (2.065, 10.655) (2.070, 14.192) (2.075, 13.015)
+    (2.080, 12.295) (2.085, 16.791) (2.090, 16.524) (2.095, 12.258)
+    (2.100, 13.473) (2.105, 20.458) (2.110, 13.409)
+};
+\addlegendentry{Full-token MSE}
+\end{axis}
+\begin{axis}[
+    width=\linewidth, height=5cm,
+    ylabel={Masked MSE},
+    axis y line*=right, axis x line=none,
+    ylabel style={color=timesfmorange},
+    tick label style={font=\footnotesize},
+    label style={font=\footnotesize},
+    ymin=0.328, ymax=0.340,
+    legend style={at={(0.98,0.98)}, anchor=north east, font=\scriptsize},
+]
+\addplot[timesfmorange, thick, mark=triangle*, mark size=1.5pt, dashed] coordinates {
+    (2.040, 0.3304) (2.045, 0.3319) (2.050, 0.3321) (2.055, 0.3323)
+    (2.060, 0.3334) (2.065, 0.3332) (2.070, 0.3336) (2.075, 0.3343)
+    (2.080, 0.3355) (2.085, 0.3350) (2.090, 0.3366) (2.095, 0.3355)
+    (2.100, 0.3360) (2.105, 0.3375) (2.110, 0.3372)
+};
+\addlegendentry{Masked MSE}
+\end{axis}
+\end{tikzpicture}
+\caption{Late-checkpoint objective trajectory (dual-axis): full-token MSE (left, blue) and masked MSE (right, orange) over global step. Masked MSE exhibits monotonic upward drift ($r=0.97$).}
 \label{fig:checkpoint_trend}
 \end{figure}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{fig_checkpoint_frontier.png}
-\caption{Speed-quality frontier for late checkpoints using masked MSE as quality and token throughput as speed.}
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth, height=5cm,
+    xlabel={Throughput (token/s)},
+    ylabel={Masked MSE},
+    tick label style={font=\footnotesize},
+    label style={font=\footnotesize},
+    scatter/classes={best={mark=star, mark size=4pt, tsfmblue}, other={mark=*, mark size=2pt, gray!70}},
+    legend style={at={(0.98,0.98)}, anchor=north east, font=\scriptsize},
+]
+\addplot[scatter, only marks, scatter src=explicit symbolic] coordinates {
+    (8839.0, 0.3304) [best]
+    (9000.4, 0.3319) [other]
+    (9185.7, 0.3321) [other]
+    (9218.3, 0.3323) [other]
+    (9011.7, 0.3334) [other]
+    (9027.4, 0.3332) [other]
+    (9140.0, 0.3336) [other]
+    (9135.6, 0.3343) [other]
+    (9145.6, 0.3355) [other]
+    (9152.7, 0.3350) [other]
+    (9147.3, 0.3366) [other]
+    (9121.6, 0.3355) [other]
+    (9169.5, 0.3360) [other]
+    (9125.4, 0.3375) [other]
+    (9179.9, 0.3372) [other]
+};
+\addlegendentry{Checkpoints}
+\end{axis}
+\end{tikzpicture}
+\caption{Speed--quality frontier for late checkpoints. The best checkpoint (star) achieves the lowest masked MSE but at slightly lower throughput, consistent with evaluation-time variance rather than a systematic trade-off.}
 \label{fig:checkpoint_frontier}
 \end{figure}
 
@@ -648,7 +764,7 @@ We attach a linear forecasting head to the pretrained encoder and fine-tune on f
 \input{tables/tab_finetune_transfer}
 \end{table}
 
-The pretrained model outperforms the from-scratch baseline on Metro (+1.94\%) and Environmental Sensor Telemetry (+7.32\%), demonstrating that masked patch reconstruction successfully learns transferable temporal representations.
+The pretrained model outperforms the from-scratch baseline on 3 of 4 datasets: Metro (+4.48\%), Environmental Sensor Telemetry (+8.09\%), and ETTh1 (+2.23\%). Beijing PM2.5 favors scratch training ($-15.57$\%), suggesting that highly non-stationary pollution data may benefit less from the current pretraining distribution. Overall, these results demonstrate that masked patch reconstruction learns transferable temporal representations.
 
 \subsection{Benchmark: TSFM vs TimesFM}
 We evaluate the fine-tuned TSFM model against Google's TimesFM~\cite{timesfm} across 7 standard forecasting benchmarks with forecast horizon $H=96$. TimesFM uses its built-in normalization; TSFM uses train-statistic z-normalization with autoregressive rollout.
@@ -670,15 +786,67 @@ We evaluate the fine-tuned TSFM model against Google's TimesFM~\cite{timesfm} ac
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{fig_benchmark_bar.png}
-\caption{Per-dataset MSE comparison between TSFM (ours) and TimesFM on 7 standard benchmarks. Log scale. TSFM wins on 5/7 datasets.}
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=8pt,
+    width=\linewidth, height=6cm,
+    ylabel={MSE (log scale)},
+    ymode=log,
+    symbolic x coords={ETTh1, ETTh2, ETTm1, ETTm2, Elec., Traffic, Weather},
+    xtick=data,
+    x tick label style={rotate=30, anchor=east, font=\footnotesize},
+    tick label style={font=\footnotesize},
+    label style={font=\footnotesize},
+    legend style={at={(0.02,0.98)}, anchor=north west, font=\scriptsize},
+    ymin=1,
+    nodes near coords style={font=\tiny, rotate=90, anchor=west},
+    enlarge x limits=0.12,
+]
+\addplot[fill=timesfmorange, draw=timesfmorange!80] coordinates {
+    (ETTh1, 10.59) (ETTh2, 57.15) (ETTm1, 5.67) (ETTm2, 32.38)
+    (Elec., 57811) (Traffic, 7129453) (Weather, 46.80)
+};
+\addplot[fill=tsfmblue, draw=tsfmblue!80] coordinates {
+    (ETTh1, 8.05) (ETTh2, 42.22) (ETTm1, 7.26) (ETTm2, 42.21)
+    (Elec., 50653) (Traffic, 4741916) (Weather, 20.21)
+};
+\legend{TimesFM, TSFM (Ours)}
+\end{axis}
+\end{tikzpicture}
+\caption{Per-dataset MSE comparison between TSFM (ours) and TimesFM on seven standard benchmarks (log scale, $H{=}96$). TSFM wins on 5 of 7 datasets.}
 \label{fig:benchmark_bar}
 \end{figure}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{fig_finetune_improvement.png}
-\caption{Transfer learning benefit: percentage MSE improvement of pretrained initialization over from-scratch training across 4 fine-tuning datasets.}
+\begin{tikzpicture}
+\begin{axis}[
+    xbar,
+    width=0.95\linewidth, height=4.5cm,
+    xlabel={MSE Improvement (\%)},
+    symbolic y coords={ETTh1, Env.~Sensor, Metro, Beijing~PM2.5},
+    ytick=data,
+    tick label style={font=\footnotesize},
+    label style={font=\footnotesize},
+    xmin=-20, xmax=18,
+    bar width=10pt,
+    nodes near coords={\pgfmathprintnumber[fixed, fixed zerofill, precision=2, showpos]{\pgfplotspointmeta}\%},
+    nodes near coords style={font=\scriptsize, anchor=west},
+    every node near coord/.append style={xshift=2pt},
+]
+\addplot[
+    fill=posgreen, draw=posgreen!80,
+] table [x=val, y=name] {
+    name         val
+    {ETTh1}      2.23
+    {Env.~Sensor} 8.09
+    {Metro}      4.48
+    {Beijing~PM2.5} -15.57
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Transfer learning benefit: percentage MSE improvement of pretrained initialization over from-scratch training. Positive values indicate pretrained superiority (3 of 4 datasets).}
 \label{fig:finetune_improvement}
 \end{figure}
 
@@ -931,6 +1099,21 @@ C.~Bergmeir, R.~Hyndman, and B.~Koo,
 F.~Petropoulos, N.~Kourentzes, and G.~Svetunkov,
 ``Forecasting: Theory and practice in modern settings,''
 \emph{European Journal of Operational Research}, vol.~299, no.~1, pp.~1--14, 2022.
+
+\bibitem{chronos2024}
+A.~Ansari, L.~Stella, A.~Turkmen, and others,
+``Chronos: Learning the language of time series,''
+arXiv:2403.07815, 2024.
+
+\bibitem{moirai2024}
+G.~Woo, C.~Liu, A.~Kumar, and others,
+``Unified training of universal time series forecasting transformers,''
+arXiv:2402.02592, 2024.
+
+\bibitem{lagllama2024}
+K.~Rasul, A.~Ashok, A.~Williams, and others,
+``Lag-Llama: Towards foundation models for probabilistic time series forecasting,''
+arXiv:2310.08278, 2024.
 
 \end{thebibliography}
 

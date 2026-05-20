@@ -86,6 +86,11 @@ def _pct(val, decimals=2):
     return f"{val:+.{decimals}f}\\%"
 
 
+def _latex_escape(text: Any) -> str:
+    """Escape a small subset of LaTeX-special characters used in table labels."""
+    return str(text).replace("_", r"\_")
+
+
 # ── Table generators ────────────────────────────────────────────────────────
 
 def gen_tab_mask_ablation(det_df: "pd.DataFrame", tables_dir: Path, values: Dict):
@@ -515,10 +520,10 @@ def gen_tab_benchmark(benchmark: Dict, tables_dir: Path, values: Dict):
         sorted_models = sorted(agg.items(), key=lambda x: x[1].get("mean_mse", 1e18))
         for rank, (model_name, stats) in enumerate(sorted_models, 1):
             n_ds = stats.get("n_datasets", 0)
+            model_label = _latex_escape(model_name)
             lines.append(
-                f"{rank} & {model_name.replace('_', '\\_')} & "
-                f"{_fmt(stats.get('mean_mse'), 2)} & {_fmt(stats.get('mean_mae'), 2)} & {n_ds}"
-            )
+                f"{rank} & {model_label} & "
+                f"{_fmt(stats.get('mean_mse'), 2)} & {_fmt(stats.get('mean_mae'), 2)} & {n_ds}")
         body = " \\\\\n".join(lines)
         tex = (
             "\\toprule\n"
@@ -538,8 +543,9 @@ def gen_tab_benchmark(benchmark: Dict, tables_dir: Path, values: Dict):
             continue
         best_model = min(models.items(), key=lambda x: x[1].get("mse", 1e18))
         model_name, model_metrics = best_model
+        model_label = _latex_escape(model_name)
         per_ds_lines.append(
-            f"{ds_name} & {model_name.replace('_', '\\_')} & "
+            f"{ds_name} & {model_label} & "
             f"{_fmt(model_metrics.get('mse'), 4)} & {_fmt(model_metrics.get('mae'), 4)}"
         )
         per_ds_records.append({

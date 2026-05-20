@@ -8,7 +8,6 @@ build/
 
 # Checkpoints and model weights
 checkpoints/
-*.pt
 !tsfm_pretrain.pt
 
 # Data

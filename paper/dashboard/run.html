@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TSFM Playground — Run Live Inference</title>
+  <meta name="description" content="TSFM Model Playground. Select time series datasets and run live forecasts.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    /* Playground specific layout */
+    .playground-header {
+      padding: var(--space-xl) 0 var(--space-md);
+    }
+    .playground-header__title {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--color-ink);
+    }
+    .playground-header__desc {
+      font-size: var(--text-base);
+      color: var(--color-neutral);
+      margin-top: var(--space-xs);
+      max-width: 60ch;
+    }
+
+    /* Controls Panel */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: flex-end;
+      padding: var(--space-md) var(--space-lg);
+      background: var(--color-paper-2);
+      border: 1px solid var(--color-rule);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-lg);
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2xs);
+    }
+    .control-group label {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      color: var(--color-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .select-input {
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--color-ink);
+      background: var(--color-paper);
+      border: 1px solid var(--color-rule);
+      border-radius: var(--radius-sm);
+      padding: var(--space-xs) var(--space-md);
+      min-width: 180px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color var(--dur-short) var(--ease-out);
+    }
+    .select-input:focus {
+      border-color: var(--color-accent);
+    }
+    .btn-run {
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-paper);
+      background: var(--color-accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: var(--space-xs) var(--space-xl);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      transition: background-color var(--dur-short) var(--ease-out), transform var(--dur-micro) var(--ease-out);
+    }
+    .btn-run:hover {
+      background-color: oklch(50% 0.18 250);
+    }
+    .btn-run:active {
+      transform: translateY(1px);
+    }
+    .btn-run:disabled {
+      background-color: var(--color-paper-3);
+      color: var(--color-neutral);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Chart visualization canvas */
+    .chart-container {
+      background: var(--color-paper-2);
+      border: 1px solid var(--color-rule);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+      position: relative;
+    }
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 380px;
+    }
+    .chart-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .chart-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-neutral);
+      font-size: var(--text-sm);
+      pointer-events: none;
+    }
+
+    /* Model status check */
+    .model-status-card {
+      font-family: var(--font-outlier);
+      font-size: var(--text-xs);
+      background: var(--color-paper-3);
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-sm);
+      color: var(--color-muted);
+      margin-left: auto;
+      border: 1px solid var(--color-rule);
+    }
+
+    /* Interactive UI stats */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-xl);
+    }
+    .metric-card {
+      background: var(--color-paper-2);
+      border: 1px solid var(--color-rule);
+      border-radius: var(--radius-md);
+      padding: var(--space-md) var(--space-lg);
+    }
+    .metric-card__title {
+      font-size: var(--text-xs);
+      color: var(--color-neutral);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-3xs);
+    }
+    .metric-card__value {
+      font-family: var(--font-outlier);
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-ink);
+    }
+
+    /* Tooltip styles */
+    .chart-tooltip {
+      position: absolute;
+      background: var(--color-paper-3);
+      border: 1px solid var(--color-rule);
+      border-radius: var(--radius-sm);
+      padding: var(--space-xs) var(--space-sm);
+      font-family: var(--font-outlier);
+      font-size: var(--text-xs);
+      pointer-events: none;
+      display: none;
+      z-index: var(--z-sticky);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav (N9 Edge-aligned minimal) -->
+  <nav class="nav" aria-label="Dashboard navigation">
+    <div style="display: flex; align-items: center; gap: var(--space-lg);">
+      <a href="index.html" class="nav__wordmark">TSFM<span>.</span>dash</a>
+      <a href="run.html" style="font-family: var(--font-outlier); font-size: var(--text-sm); color: var(--color-ink); text-decoration: none; font-weight: 500;">Playground</a>
+    </div>
+    <div class="nav__status" aria-label="Model status">
+      <span class="nav__dot" id="server-status-dot" style="background: var(--color-neutral);" aria-hidden="true"></span>
+      <span id="server-status-text">Checking server...</span>
+    </div>
+  </nav>
+
+  <main class="shell">
+
+    <!-- Header -->
+    <header class="playground-header reveal" style="--i: 0">
+      <h1 class="playground-header__title">Model Playground</h1>
+      <p class="playground-header__desc">Select a dataset and time series slice to run real-time forecasting with the TSFM pre-trained weights.</p>
+    </header>
+
+    <!-- Controls -->
+    <section class="controls reveal" style="--i: 1" aria-label="Playground controls">
+      <div class="control-group">
+        <label for="dataset-select">Evaluation Dataset</label>
+        <select id="dataset-select" class="select-input">
+          <option value="ETTh1">ETTh1 (Hourly Electricity)</option>
+          <option value="ETTh2">ETTh2 (Hourly Electricity)</option>
+          <option value="traffic">Traffic (Hourly Volume)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="slice-select">Time Slice Offset</label>
+        <select id="slice-select" class="select-input">
+          <option value="0">Default Slice (Step 0)</option>
+          <option value="500">Slice 2 (Step 500)</option>
+          <option value="1000">Slice 3 (Step 1000)</option>
+          <option value="2000">Slice 4 (Step 2000)</option>
+          <option value="random">Random Slice</option>
+        </select>
+      </div>
+
+      <button id="run-btn" class="btn-run">
+        <span>Run Inference</span>
+      </button>
+
+      <div class="model-status-card" id="model-details-card">
+        Checkpoint: loading...
+      </div>
+    </section>
+
+    <!-- Visualizer Chart -->
+    <section class="chart-container reveal" style="--i: 2" aria-label="Inference Visualizer">
+      <div class="chart-wrapper">
+        <canvas id="playground-canvas" class="chart-canvas"></canvas>
+        <div id="chart-placeholder" class="chart-placeholder">
+          <span>Click "Run Inference" to load data and execute the TSFM forecasting head.</span>
+        </div>
+        <div id="chart-tooltip" class="chart-tooltip"></div>
+      </div>
+
+      <div class="chart-legend" style="margin-top: var(--space-md);">
+        <div class="chart-legend__item">
+          <span class="chart-legend__swatch" style="background: var(--color-muted);"></span>
+          Historical Context (L=512)
+        </div>
+        <div class="chart-legend__item">
+          <span class="chart-legend__swatch" style="background: var(--color-rule);"></span>
+          Actual Ground Truth (H=24)
+        </div>
+        <div class="chart-legend__item">
+          <span class="chart-legend__swatch" style="background: var(--color-accent);"></span>
+          TSFM Forecast (H=24)
+        </div>
+      </div>
+    </section>
+
+    <!-- Metrics Row -->
+    <section class="metrics-row reveal" style="--i: 3" aria-label="Inference metrics">
+      <div class="metric-card">
+        <h2 class="metric-card__title">Inference Latency</h2>
+        <div class="metric-card__value" id="metric-latency">—</div>
+      </div>
+      <div class="metric-card">
+        <h2 class="metric-card__title">Inference MSE</h2>
+        <div class="metric-card__value" id="metric-mse">—</div>
+      </div>
+      <div class="metric-card">
+        <h2 class="metric-card__title">Inference MAE</h2>
+        <div class="metric-card__value" id="metric-mae">—</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span class="footer__copy">TSFM Dashboard — Feature-Bootstrapped Masked Reconstruction</span>
+    <span class="footer__build">Playground mode</span>
+  </footer>
+
+  <script>
+    // Elements
+    const runBtn = document.getElementById("run-btn");
+    const datasetSelect = document.getElementById("dataset-select");
+    const sliceSelect = document.getElementById("slice-select");
+    const canvas = document.getElementById("playground-canvas");
+    const placeholder = document.getElementById("chart-placeholder");
+    const statusDot = document.getElementById("server-status-dot");
+    const statusText = document.getElementById("server-status-text");
+    const modelCard = document.getElementById("model-details-card");
+    const tooltip = document.getElementById("chart-tooltip");
+
+    const mLatency = document.getElementById("metric-latency");
+    const mMSE = document.getElementById("metric-mse");
+    const mMAE = document.getElementById("metric-mae");
+
+    let serverAvailable = false;
+    let canvasData = null;
+
+    // Check server status on startup
+    async function checkServer() {
+      try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+        serverAvailable = true;
+        statusDot.style.background = "var(--color-pos)";
+        statusText.textContent = "Server connected";
+        modelCard.textContent = `Checkpoint: ${data.checkpoint} (${data.parameters})`;
+        runBtn.removeAttribute("disabled");
+      } catch (err) {
+        serverAvailable = false;
+        statusDot.style.background = "var(--color-neg)";
+        statusText.textContent = "Offline (running simulation)";
+        modelCard.textContent = "Using client-side synthetic model simulation";
+        runBtn.removeAttribute("disabled"); // Enable simulation mode
+      }
+    }
+
+    // Run inference
+    runBtn.addEventListener("click", async () => {
+      runBtn.setAttribute("disabled", "true");
+      placeholder.style.display = "none";
+
+      const dataset = datasetSelect.value;
+      const slice = sliceSelect.value;
+
+      mLatency.textContent = "Running...";
+      mMSE.textContent = "...";
+      mMAE.textContent = "...";
+
+      if (serverAvailable) {
+        try {
+          const start = performance.now();
+          const res = await fetch(`/api/run?dataset=${dataset}&slice=${slice}`);
+          const data = await res.json();
+          const latency = (performance.now() - start).toFixed(1);
+
+          canvasData = data;
+          drawChart(data);
+
+          mLatency.textContent = `${latency}ms`;
+          mMSE.textContent = data.metrics.mse.toFixed(4);
+          mMAE.textContent = data.metrics.mae.toFixed(4);
+        } catch (err) {
+          console.error("Server API run failed, falling back to simulation", err);
+          runSimulation();
+        }
+      } else {
+        runSimulation();
+      }
+
+      runBtn.removeAttribute("disabled");
+    });
+
+    // Client-side simulation when server is offline
+    function runSimulation() {
+      // Create some beautiful mock timeseries data
+      const contextLength = 512;
+      const horizon = 24;
+      const context = [];
+      let currentVal = 20 + Math.random() * 10;
+      let trend = (Math.random() - 0.5) * 0.05;
+
+      for (let i = 0; i < contextLength; i++) {
+        // Multi-frequency wave pattern
+        const seasonal1 = Math.sin(i * 0.1) * 3;
+        const seasonal2 = Math.cos(i * 0.02) * 6;
+        currentVal += trend + (Math.random() - 0.5) * 0.5;
+        context.push(currentVal + seasonal1 + seasonal2);
+      }
+
+      // Generate future actuals
+      const actual = [];
+      for (let i = 0; i < horizon; i++) {
+        const step = contextLength + i;
+        const seasonal1 = Math.sin(step * 0.1) * 3;
+        const seasonal2 = Math.cos(step * 0.02) * 6;
+        currentVal += trend + (Math.random() - 0.5) * 0.8;
+        actual.push(currentVal + seasonal1 + seasonal2);
+      }
+
+      // Generate forecast (smoothly following but with some variance)
+      const forecast = [];
+      let forecastVal = context[contextLength - 1];
+      for (let i = 0; i < horizon; i++) {
+        const step = contextLength + i;
+        const seasonal1 = Math.sin(step * 0.1) * 2.8; // slightly different scale
+        const seasonal2 = Math.cos(step * 0.02) * 5.8;
+        forecastVal += trend + (Math.random() - 0.5) * 0.4;
+        forecast.push(forecastVal + seasonal1 + seasonal2 + (Math.random() - 0.5) * 0.3);
+      }
+
+      // Calculate simple MSE & MAE
+      let mse = 0;
+      let mae = 0;
+      for (let i = 0; i < horizon; i++) {
+        const diff = forecast[i] - actual[i];
+        mse += diff * diff;
+        mae += Math.abs(diff);
+      }
+      mse /= horizon;
+      mae /= horizon;
+
+      const data = {
+        context,
+        actual,
+        forecast,
+        metrics: { mse, mae }
+      };
+
+      canvasData = data;
+      drawChart(data);
+
+      mLatency.textContent = `${(10 + Math.random() * 5).toFixed(1)}ms (Sim)`;
+      mMSE.textContent = mse.toFixed(4);
+      mMAE.textContent = mae.toFixed(4);
+    }
+
+    // Chart Drawing Engine (Canvas)
+    function drawChart(data) {
+      const ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      
+      const width = canvas.parentElement.offsetWidth;
+      const height = canvas.parentElement.offsetHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const pad = { top: 30, right: 30, bottom: 40, left: 60 };
+      const plotW = width - pad.left - pad.right;
+      const plotH = height - pad.top - pad.bottom;
+
+      const allVals = [...data.context, ...data.actual, ...data.forecast];
+      const minV = Math.min(...allVals);
+      const maxV = Math.max(...allVals);
+      const vRange = maxV - minV || 1;
+
+      // Coordinate mapping helpers
+      function getX(index) {
+        const totalPoints = data.context.length + data.actual.length;
+        return pad.left + (index / (totalPoints - 1)) * plotW;
+      }
+      function getY(val) {
+        return pad.top + (1 - (val - minV) / vRange) * plotH;
+      }
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Get root token styling properties
+      const rootStyles = getComputedStyle(document.documentElement);
+      const colorRule = rootStyles.getPropertyValue("--color-rule").trim() || "#e5e5e5";
+      const colorMuted = rootStyles.getPropertyValue("--color-muted").trim() || "#737373";
+      const colorNeutral = rootStyles.getPropertyValue("--color-neutral").trim() || "#a3a3a3";
+      const colorAccent = rootStyles.getPropertyValue("--color-accent").trim() || "#4f46e5";
+      const colorInk = rootStyles.getPropertyValue("--color-ink").trim() || "#171717";
+
+      // Draw Grid Lines (Y-Axis)
+      ctx.strokeStyle = colorRule;
+      ctx.lineWidth = 0.5;
+      ctx.fillStyle = colorNeutral;
+      ctx.font = "11px 'JetBrains Mono', monospace";
+      ctx.textAlign = "right";
+
+      for (let i = 0; i <= 4; i++) {
+        const val = minV + (i / 4) * vRange;
+        const y = getY(val);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(width - pad.right, y);
+        ctx.stroke();
+        ctx.fillText(val.toFixed(2), pad.left - 8, y + 4);
+      }
+
+      // X-Axis tick line
+      ctx.beginPath();
+      ctx.moveTo(pad.left, height - pad.bottom);
+      ctx.lineTo(width - pad.right, height - pad.bottom);
+      ctx.stroke();
+
+      // Divider line between context and prediction
+      const dividerX = getX(data.context.length - 1);
+      ctx.strokeStyle = colorMuted;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(dividerX, pad.top);
+      ctx.lineTo(dividerX, height - pad.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset line dash
+
+      ctx.fillStyle = colorMuted;
+      ctx.textAlign = "center";
+      ctx.fillText("Forecast Start", dividerX, pad.top - 8);
+
+      // ── Draw Paths ──
+      
+      // 1. Context Path
+      ctx.beginPath();
+      ctx.strokeStyle = colorMuted;
+      ctx.lineWidth = 1.5;
+      data.context.forEach((val, i) => {
+        if (i === 0) ctx.moveTo(getX(i), getY(val));
+        else ctx.lineTo(getX(i), getY(val));
+      });
+      ctx.stroke();
+
+      // 2. Actual Future Path
+      ctx.beginPath();
+      ctx.strokeStyle = colorNeutral;
+      ctx.lineWidth = 1.5;
+      data.actual.forEach((val, i) => {
+        const idx = data.context.length + i;
+        if (i === 0) ctx.moveTo(getX(idx - 1), getY(data.context[data.context.length - 1]));
+        ctx.lineTo(getX(idx), getY(val));
+      });
+      ctx.stroke();
+
+      // 3. Forecast Path
+      ctx.beginPath();
+      ctx.strokeStyle = colorAccent;
+      ctx.lineWidth = 2.5;
+      data.forecast.forEach((val, i) => {
+        const idx = data.context.length + i;
+        if (i === 0) ctx.moveTo(getX(idx - 1), getY(data.context[data.context.length - 1]));
+        ctx.lineTo(getX(idx), getY(val));
+      });
+      ctx.stroke();
+    }
+
+    // Interactive tooltip coordinate tracker
+    canvas.addEventListener("mousemove", (e) => {
+      if (!canvasData) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const pad = { top: 30, right: 30, bottom: 40, left: 60 };
+      const plotW = rect.width - pad.left - pad.right;
+      
+      // Find closest index
+      const totalPoints = canvasData.context.length + canvasData.actual.length;
+      const index = Math.round(((x - pad.left) / plotW) * (totalPoints - 1));
+
+      if (index >= 0 && index < totalPoints) {
+        let label = "";
+        let val = 0;
+        let isForecast = false;
+
+        if (index < canvasData.context.length) {
+          label = "Context step " + index;
+          val = canvasData.context[index];
+        } else {
+          const fIdx = index - canvasData.context.length;
+          label = "Forecast step " + fIdx;
+          val = canvasData.actual[fIdx];
+          const fVal = canvasData.forecast[fIdx];
+          isForecast = true;
+          
+          tooltip.innerHTML = `
+            <div><strong>${label}</strong></div>
+            <div style="color: var(--color-muted)">Actual: ${val.toFixed(3)}</div>
+            <div style="color: var(--color-accent)">TSFM: ${fVal.toFixed(3)}</div>
+          `;
+        }
+
+        if (!isForecast) {
+          tooltip.innerHTML = `
+            <div><strong>${label}</strong></div>
+            <div>Value: ${val.toFixed(3)}</div>
+          `;
+        }
+
+        tooltip.style.left = (e.clientX - rect.left + 15) + "px";
+        tooltip.style.top = (e.clientY - rect.top + 15) + "px";
+        tooltip.style.display = "block";
+      } else {
+        tooltip.style.display = "none";
+      }
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+    });
+
+    // Check server connection
+    checkServer();
+  </script>
+
+</body>
+</html>

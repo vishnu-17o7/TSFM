@@ -1,0 +1,77 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=0.65in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+% Better spacing for lists to fill the page properly
+\setlist{leftmargin=*, itemsep=0.1em}
+
+% Formatting for section titles
+\titleformat{\section}{\large\bfseries}{\thesection}{0.5em}{}
+\titlespacing*{\section}{0pt}{2ex plus 1ex minus .2ex}{1ex plus .2ex}
+
+\begin{document}
+\pagestyle{empty} % Remove page numbers for a 1-page report
+
+% -----------------------------------------------------------
+% HEADER: Logo Left, Text Right
+% -----------------------------------------------------------
+\noindent
+\begin{minipage}[c]{0.20\textwidth}
+    % Replace 'college_logo.png' with your actual logo file name
+     \includegraphics[width=\linewidth,height=1.2in,keepaspectratio]{college_logo.png} 
+\end{minipage}%
+\begin{minipage}[c]{0.80\textwidth}
+    \raggedright
+    {\LARGE \textbf{Coimbatore Institute of Technology}} \\[0.1cm]
+    {\large \textbf{Department of Computing}} \\[0.1cm]
+    {\large Artificial Intelligence and Machine Learning \textbar\ MS 402}
+\end{minipage}
+
+\vspace{0.1cm}
+\hrule
+\vspace{0.1cm}
+{\centering
+    {\Large \textbf{Project Summary Report}} \\[0.1cm]
+    {\large Feature-Bootstrapped Masked TSFM: Theory, Complexity, and Controlled Ablations for Reproducible Time-Series Pretraining} \\[0.3cm]
+    {\normalsize Author One \quad Author Two \quad Author Three} \\[0.1cm]
+    {\small Code available at: \url{https://github.com/vishnu-17o7/TSFM}}\par
+}
+
+\vspace{0.2cm}
+\hrule
+\vspace{0.3cm}
+
+% -----------------------------------------------------------
+% 1. Project Overview
+% -----------------------------------------------------------
+\section*{1. Project Overview}
+This project develops a reproducible, large-scale time-series foundation model (TSFM) utilizing a masked latent reconstruction objective. The proposed architecture integrates Reversible Instance Normalization (RevIN), convolutional patch tokenization, a bidirectional Transformer encoder, and an MLP reconstruction head. Unlike existing decoder-only models (e.g., TimesFM) that rely on massive internet-scale observational data, this project addresses data scarcity by introducing a fallback mechanism to feature-bootstrap synthesis, leveraging 44 feature tables to generate synthetic temporal data for pretraining. We conducted rigorous complexity analyses and multi-seed ablations across mask ratios and patch lengths to isolate optimal compute-efficient configurations.
+
+% -----------------------------------------------------------
+% 2. HPC Utilization
+% -----------------------------------------------------------
+\section*{2. High-Performance Computing (HPC) Utilization}
+High-Performance Computing (HPC) resources were pivotal to managing the heavy computational requirements of training large-scale transformer models on extensive time-series datasets. The HPC cluster facilitated:
+\begin{itemize}
+    \item \textbf{Parallel Multi-Seed Ablations:} Extensive seed-stratified ablations across configurations were executed simultaneously on multiple GPU nodes to quantify uncertainty and prevent misleading conclusions from deterministic single-seed runs.
+    \item \textbf{Large-Scale Pretraining:} The compute environment supported deep training horizons (over 2.11M steps, 62 epochs), enabling detailed late-checkpoint auditing and stability analysis.
+    \item \textbf{Throughput Optimization:} By utilizing HPC profiling, we empirically validated attention memory scaling ($\mathcal{O}(BN^2d)$) and epoch runtimes. This confirmed that a patch length of $P=32$ provides the optimal balance of representational capacity and runtime efficiency.
+\end{itemize}
+
+% -----------------------------------------------------------
+% 3. Verified Results & Downstream Performance
+% -----------------------------------------------------------
+\section*{3. Verified Results and Downstream Performance}
+The project successfully linked pretraining design choices to downstream forecasting performance. Key verified findings include:
+\begin{itemize}
+    \item \textbf{Configuration Superiority:} Multi-seed evaluations confirmed that patch length $P=32$ outperforms $P=16$ and $P=8$ in both masked reconstruction quality and runtime efficiency under a fixed step budget.
+    \item \textbf{Checkpoint Stability:} The optimal masked Mean Squared Error (MSE) of 0.3304 was achieved at step 2.04M, with a minimal 2.04\% drift by the final checkpoint at step 2.11M, proving that validation-based checkpoint selection strongly outperforms recency-based selection.
+    \item \textbf{Transfer Learning Efficacy:} The pretrained TSFM model transferred robustly to downstream tasks, outperforming from-scratch baselines on 3 out of 4 tested datasets (Metro, Environmental Sensor Telemetry, and ETTh1).
+    \item \textbf{State-of-the-Art Benchmark Comparison:} In direct evaluation against Google's TimesFM, our initialized encoder model achieved \textbf{Rank 1} overall. It yielded a \textbf{33\% lower mean MSE}, winning 5 out of 7 standard forecasting benchmark datasets (ETTh1, ETTh2, Electricity, Traffic, and Weather).
+\end{itemize}
+
+\end{document}

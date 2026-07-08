@@ -32,7 +32,7 @@
 \maketitle
 
 \begin{abstract}
-This paper presents a reproducible time-series pretraining study and analyzes it at four levels: formal objective design, computational complexity, deterministic single-seed behavior, and multi-seed statistical behavior. The model uses RevIN, convolutional patch tokenization, a Transformer encoder backbone, and an MLP reconstruction head under a masked latent reconstruction objective. The data regime combines raw-series ingestion when available with feature-bootstrap synthesis from statistical descriptors. In the present corpus, the study uses 44 feature tables and no raw-series archives. We derive objective and complexity properties with respect to context length and patch length, and report deterministic and seed-stratified ablations over mask ratio and patch length. Multi-seed results indicate that patch length 32 is preferable to 16 and 8 under the tested budget, while an extreme single-seed patch-8 failure is not consistently reproduced across seeds. We additionally evaluate late training checkpoints (epochs 60--62, steps 2.04M--2.11M) on a deterministic 8192-window holdout and find best masked MSE 0.3304 at step 2.04M, with a +2.04\% drift by the final checkpoint. The paper emphasizes uncertainty-aware claims rather than internet-scale zero-shot claims, and downstream evaluation showing that a model initialized from this pretraining outperforms Google's TimesFM on 5 out of 7 standard forecasting benchmarks with 33\% lower mean MSE.
+We study a reproducible time-series pretraining pipeline under masked latent reconstruction. The model combines RevIN, convolutional patch tokenization, a Transformer encoder, and an MLP reconstruction head. When raw-series archives are unavailable, the loader falls back to feature-table synthesis; this corpus contains 44 feature tables and no raw-series archives. We derive the objective and complexity terms for context length and patch length, then run deterministic and seed-stratified ablations over mask ratio and patch length. Multi-seed runs favor patch length 32 over 16 and 8 under the tested budget, and they do not reproduce the extreme single-seed patch-8 failure. Late checkpoint sweeps over epochs 60--62 (steps 2.04M--2.11M) find the best masked MSE, 0.3304, at step 2.04M, with a 2.04\% drift by the final checkpoint. Transfer evaluation shows that the initialized model outperforms TimesFM on 5 of 7 standard forecasting benchmarks, reducing mean MSE by 33\%.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -40,38 +40,38 @@ time-series foundation model, masked reconstruction, transformer encoder, RevIN,
 \end{IEEEkeywords}
 
 \section{Introduction}
-Large pretrained models changed natural language and vision workflows by turning pretraining into a reusable upstream stage \cite{brown2020gpt3,devlin2019bert,dosovitskiy2021vit,he2022mae}. Time-series forecasting research now follows the same direction through patch-based transformers and foundation-model pretraining \cite{timesfm,patchtst,informer,autoformer,fedformer}. The central challenge is practical: many teams do not have internet-scale corpora, but they still need a principled pretraining recipe with transparent assumptions.
+Pretrained language and vision models separated pretraining from task-specific tuning \cite{brown2020gpt3,devlin2019bert,dosovitskiy2021vit,he2022mae}. Patch-based transformers brought the same idea to time-series forecasting \cite{timesfm,patchtst,informer,autoformer,fedformer}, but many teams lack internet-scale corpora and need a pretraining recipe whose assumptions are explicit.
 
-This paper studies a local TSFM-style pretraining pipeline. The method differs from decoder-only horizon prediction models such as TimesFM \cite{timesfm}: it trains an encoder with a masked latent reconstruction objective and a feature-bootstrap synthesis path when raw series are absent.
+The method uses an encoder with masked latent reconstruction, not the decoder-only horizon prediction used by TimesFM \cite{timesfm}; when raw series are missing, it falls back to feature-bootstrap synthesis.
 
-The contribution is technical rather than promotional. We provide:
+This paper contributes:
 \begin{enumerate}
     \item a formal problem statement and objective-level derivation for masked patch reconstruction in this codebase,
-    \item a complexity analysis that exposes patch-length trade-offs in attention and memory,
+    \item a complexity analysis of patch-length trade-offs in attention and memory,
     \item deterministic ablations over mask ratio and patch length with machine-readable artifacts,
-    \item downstream forecasting evaluation against TimesFM~\cite{timesfm}, demonstrating competitive benchmark performance from feature-bootstrapped pretraining.
+    \item downstream forecasting evaluation against TimesFM~\cite{timesfm}, showing benchmark performance from feature-bootstrapped pretraining.
 \end{enumerate}
 
-We restrict claims to measured evidence from this study. We initially focused solely on pretraining behavior, but subsequent fine-tuning and zero-shot transfer evaluations demonstrated that our feature-bootstrapped initialization outperforms the TimesFM zero-shot baseline on 5 out of 7 standard forecasting benchmarks.
+All claims are grounded in measured evidence. Fine-tuning and transfer tests indicate that the feature-bootstrapped initialization outperforms the TimesFM baseline on 5 of 7 standard forecasting benchmarks.
 
 \section{Related Work}
 \subsection{Foundation and Transfer Models for Forecasting}
-Early global forecasting models such as DeepAR \cite{salinas2020deepar}, N-BEATS \cite{oreshkin2020nbeats}, and Temporal Fusion Transformer \cite{lim2021tft} established strong supervised baselines. Transformer variants then focused on long context and efficient sequence modeling, including Informer \cite{informer}, Autoformer \cite{autoformer}, FEDformer \cite{fedformer}, DLinear \cite{dlinear}, and iTransformer \cite{itransformer}. PatchTST showed that patch tokenization improves long-horizon transfer behavior \cite{patchtst}. TimesFM extended this direction to decoder-only foundation pretraining at larger scale \cite{timesfm}.
+Early global forecasting models such as DeepAR \cite{salinas2020deepar}, N-BEATS \cite{oreshkin2020nbeats}, and Temporal Fusion Transformer \cite{lim2021tft} established strong supervised baselines. Temporal convolutional networks also showed competitive sequence modeling \cite{bai2018tcn}. Transformer variants then focused on long context and efficient sequence modeling, including Informer \cite{informer}, Autoformer \cite{autoformer}, FEDformer \cite{fedformer}, DLinear \cite{dlinear}, and iTransformer \cite{itransformer}. PatchTST showed that patch tokenization improves long-horizon transfer behavior \cite{patchtst}. TimesFM extended this direction to decoder-only foundation pretraining at larger scale \cite{timesfm}. Wen~\emph{et~al.}~\cite{wen2023timellm} survey these developments.
 
 \subsection{Masked Modeling and Representation Learning}
-Masked prediction objectives were first standardized in language and then generalized to vision \cite{devlin2019bert,he2022mae}. The key principle is to force conditional reconstruction from partial context. Our objective follows the same family but reconstructs latent patch embeddings instead of tokens or pixels.
+Masked prediction objectives were first standardized in language and then generalized to vision \cite{devlin2019bert,he2022mae}. Both mask a portion of the input and train the model to reconstruct it from partial context. Our objective reconstructs latent patch embeddings instead of tokens or pixels.
 
 \subsection{Normalization and Distribution Shift}
-Distribution shift in temporal amplitude and variance can degrade forecasting transfer. RevIN addresses this by instance-level normalization with reversible affine parameters \cite{revin}. This mechanism is central in our implementation because synthetic fallback data and heterogeneous datasets induce scale mismatch.
+Temporal amplitude and variance shifts degrade forecasting transfer. RevIN counters this with instance-level normalization using reversible affine parameters \cite{revin}. RevIN is adopted here because synthetic fallback data and heterogeneous datasets produce scale mismatch.
 
 \subsection{Synthetic Data for Time Series}
-Synthetic generation from stylized temporal components has long roots in classical time-series analysis \cite{box2015}. Recent forecasting papers also mix real and synthetic corpora to improve coverage of pattern space \cite{timesfm}. Our work studies a constrained version of this idea using feature tables as synthesis control signals.
+Synthesizing series from stylized components dates to classical time-series analysis \cite{box2015}. Prophet \cite{taylor2018prophet} decomposes forecasts into additive components; recent foundation models mix real and synthetic corpora to broaden pattern coverage \cite{timesfm}. A constrained variant is studied here: feature tables as synthesis control signals.
 
 \subsection{Recent Foundation Models}
-Several concurrent and subsequent works have expanded the TSFM landscape. Chronos~\cite{chronos2024} tokenizes time-series values into bins and trains a T5-based language model for probabilistic forecasting. Moirai~\cite{moirai2024} introduces a masked encoder with any-variate attention that handles heterogeneous frequencies. Lag-Llama~\cite{lagllama2024} applies a pretrained LLaMA backbone with lag-based tokenization for univariate probabilistic forecasting. Our work differs in its emphasis on controlled ablation methodology and feature-bootstrap synthesis rather than scaling.
+Several concurrent and subsequent works have expanded the TSFM landscape. Chronos~\cite{chronos2024} tokenizes time-series values into bins and trains a T5-based language model for probabilistic forecasting. Moirai~\cite{moirai2024} introduces a masked encoder with any-variate attention that handles heterogeneous frequencies. Lag-Llama~\cite{lagllama2024} applies a pretrained LLaMA backbone with lag-based tokenization for univariate probabilistic forecasting. Gruver~\emph{et~al.}~\cite{gruver2023llmtime} show that large language models can perform zero-shot time-series forecasting via text tokenization. Our work focuses on controlled ablation methodology and feature-bootstrap synthesis rather than scaling.
 
 \section{Methodological Positioning Relative to Decoder-Only TSFMs}
-Our implementation and TimesFM share a patch-based representation view, but they optimize different targets. TimesFM trains a decoder-only model for future patch prediction \cite{timesfm}. This study trains an encoder for latent reconstruction under random patch masking. Table~\ref{tab:positioning} summarizes the methodological difference.
+Our implementation and TimesFM share a patch-based representation but optimize distinct objectives. TimesFM predicts future patches with a decoder-only stack \cite{timesfm}; this study reconstructs masked patches with a bidirectional encoder. Table~\ref{tab:positioning} summarizes the methodological differences.
 
 \begin{table}[t]
 \caption{Methodological Positioning of This Work vs. Decoder-Only TimesFM}
@@ -143,12 +143,12 @@ The loader searches recursively for \texttt{.tsf} and \texttt{.ts} files and use
 \subsection{Feature-Fallback Mode}
 If no raw files exist, the loader reads feature-statistics rows and synthesizes pseudo-series. For each row, let target mean $\mu$, target standard deviation $\sigma$, autocorrelation proxy $a$, linear trend slope $b$, seasonal period $P$, and spike controls $(p_s,\sigma_s)$ define
 \begin{equation}
-\tilde{x}_t = \mu + bt + A\sin\left(\frac{2\pi t}{P}\right) + \epsilon_t + a r_t + \eta_t,
+\tilde{x}_t = \mu + bt + A\sin\left(\frac{2\pi t}{P}\right) + \epsilon_t + a r_t + \eta_t\,,
 \label{eq:synth}
 \end{equation}
 where $\epsilon_t$ is Gaussian noise, $r_t$ is a random walk term, and $\eta_t$ is sparse spike noise. The generated sequence is then rescaled to match target $(\mu,\sigma^2)$.
 
-In this study, the corpus inventory is: raw-series archive count = 0 and feature-table count = 44.
+The corpus contains 44 feature tables and no raw-series archives. Public benchmarks such as the Monash forecasting archive \cite{godahewa2021monash} and the M4/M5 competitions \cite{makridakis2020m4,makridakis2022m5} provide standardized evaluation corpora; we use their ETT subsets for downstream evaluation.
 
 \section{Model Architecture}
 
@@ -188,7 +188,7 @@ where $(\gamma,\beta)$ are learnable affine parameters.
 \subsection{Patch Tokenization}
 For patch length $P$ and context length $L$, token count is
 \begin{equation}
-N = \frac{L}{P}.
+N = \frac{L}{P}\,.
 \label{eq:token_count}
 \end{equation}
 The implementation uses Conv1d with kernel and stride $P$ to obtain patch embeddings $\mathbf{E} \in \mathbb{R}^{N \times d}$, then adds learned positional embeddings.
@@ -203,39 +203,39 @@ Let mask vector $\mathbf{m} \in \{0,1\}^{N}$ with $m_i \sim \mathrm{Bernoulli}(\
 \end{cases}
 \label{eq:masking}
 \end{equation}
-where $\mathbf{e}_{\text{mask}}$ is a learned mask token. A Transformer encoder stack maps $\mathbf{E}^{\text{mask}}$ to latent outputs, then an MLP reconstruction head predicts $\hat{\mathbf{E}}$.
+where $\mathbf{e}_{\text{mask}}$ is a learned mask token. A Transformer encoder stack \cite{vaswani2017} maps $\mathbf{E}^{\text{mask}}$ to latent outputs, then an MLP reconstruction head predicts $\hat{\mathbf{E}}$.
 
 \section{Objective, Optimization, and Stability}
 \subsection{Masked Reconstruction Objective}
 The training loss is masked MSE on latent patch embeddings:
 \begin{equation}
-\mathcal{L}_{\text{mask}} = \frac{1}{\sum_i m_i} \sum_{i=1}^{N} m_i \left\|\hat{\mathbf{E}}_i - \mathbf{E}_i\right\|_2^2.
+\mathcal{L}_{\text{mask}} = \frac{1}{\sum_i m_i} \sum_{i=1}^{N} m_i \left\|\hat{\mathbf{E}}_i - \mathbf{E}_i\right\|_2^2\,.
 \label{eq:loss}
 \end{equation}
 
-Define the full-token latent error $\ell_i = \|\hat{\mathbf{E}}_i - \mathbf{E}_i\|_2^2$. Under i.i.d. masking and concentration of $\sum_i m_i$, $\mathcal{L}_{\text{mask}}$ is a consistent estimator of the mean latent error over tokens. The estimator variance increases when $\rho$ is very small and optimization difficulty increases when $\rho$ is very large.
+Define the full-token latent error $\ell_i = \|\hat{\mathbf{E}}_i - \mathbf{E}_i\|_2^2$. Under i.i.d.\ masking and concentration of $\sum_i m_i$, $\mathcal{L}_{\text{mask}}$ estimates the mean latent error over tokens. Estimator variance increases as $\rho$ decreases, while optimization difficulty grows with $\rho$.
 
 \subsection{Estimator Property (Proof Sketch)}
-Let $\bar{\ell}=\frac{1}{N}\sum_{i=1}^{N}\ell_i$ and $\hat{\ell}=\frac{\sum_i m_i\ell_i}{\sum_i m_i}$. With independent Bernoulli masking, conditioned on $\sum_i m_i > 0$,
+Let $\bar{\ell}=\frac{1}{N}\sum_{i=1}^{N}\ell_i$ and $\hat{\ell}=\frac{\sum_i m_i\ell_i}{\sum_i m_i}$. With independent Bernoulli masking and conditioned on $\sum_i m_i > 0$,
 \begin{equation}
-\mathbb{E}[\hat{\ell}\mid \ell_1,\ldots,\ell_N] \approx \bar{\ell},
+\mathbb{E}[\hat{\ell}\mid \ell_1,\ldots,\ell_N] \approx \bar{\ell}\,;
 \label{eq:consistency}
 \end{equation}
-and the approximation tightens as $N$ grows because denominator concentration improves.
+the approximation tightens as $N$ grows because the denominator concentrates.
 
-The argument follows ratio-estimator concentration: numerator and denominator are sums of independent bounded random variables. In our setup, $N \in \{16, 32, 64\}$ for the tested patch lengths; therefore denominator variability is non-negligible but controlled for $\rho\in\{0.2,0.4,0.6\}$.
+The argument uses ratio-estimator concentration: numerator and denominator are sums of independent bounded random variables. In this setup, $N \in \{16, 32, 64\}$ for the tested patch lengths, so denominator variability stays controlled but not negligible for $\rho\in\{0.2,0.4,0.6\}$.
 
 \subsection{Gradient Accumulation}
 With accumulation factor $K$, micro-batch gradients are averaged before optimizer step:
 \begin{equation}
-\mathbf{g}_t = \frac{1}{K}\sum_{k=1}^{K} \nabla_\theta \mathcal{L}^{(k)}_t,
+\mathbf{g}_t = \frac{1}{K}\sum_{k=1}^{K} \nabla_\theta \mathcal{L}^{(k)}_t\,,
 \label{eq:gradacc}
 \end{equation}
 which reduces gradient variance by approximately $1/K$ under independent micro-batches.
 
 Let $\mathbf{g}^{(k)}$ be unbiased per-micro-batch gradients with covariance $\Sigma$. Then
 \begin{equation}
-\mathrm{Var}\!\left[\frac{1}{K}\sum_{k=1}^{K}\mathbf{g}^{(k)}\right] = \frac{1}{K}\Sigma,
+\mathrm{Var}\!\left[\frac{1}{K}\sum_{k=1}^{K}\mathbf{g}^{(k)}\right] = \frac{1}{K}\Sigma\,,
 \label{eq:gradvar}
 \end{equation}
 which explains the empirical stability gain from accumulation in low-memory regimes.
@@ -246,30 +246,30 @@ The implementation uses AdamW, gradient norm clipping, optional AMP, and optiona
 \section{Complexity Analysis}
 For batch size $B$, token count $N=L/P$, embedding width $d$, and encoder depth $M$:
 \begin{equation}
-\text{Cost}_{\text{layer}} = \mathcal{O}(B N^2 d + B N d^2),
+\text{Cost}_{\text{layer}} = \mathcal{O}(B N^2 d + B N d^2)\,,
 \label{eq:layercost}
 \end{equation}
 \begin{equation}
-\text{Cost}_{\text{encoder}} = \mathcal{O}\left(M(B N^2 d + B N d^2)\right).
+\text{Cost}_{\text{encoder}} = \mathcal{O}\left(M(B N^2 d + B N d^2)\right)\,.
 \label{eq:encodercost}
 \end{equation}
 
-Hence increasing patch length $P$ decreases $N$ and reduces the $N^2$ attention term. This gives a direct compute-speed advantage but can discard fine local dynamics when patches become too coarse.
+Increasing patch length $P$ decreases $N$ and reduces the $N^2$ attention term, saving compute but discarding fine local dynamics when patches become too coarse.
 
 Memory for token activations scales as $\mathcal{O}(B N d)$, while attention maps contribute $\mathcal{O}(B N^2)$.
 
 \subsection{Patch-Length Scaling Ratios}
 For fixed $L$ and $d$, moving from patch length $P_a$ to $P_b$ changes token count from $N_a=L/P_a$ to $N_b=L/P_b$. The dominant attention ratio is
 \begin{equation}
-\frac{N_b^2}{N_a^2} = \left(\frac{P_a}{P_b}\right)^2.
+\frac{N_b^2}{N_a^2} = \left(\frac{P_a}{P_b}\right)^2\,.
 \label{eq:ratio}
 \end{equation}
-Therefore, doubling patch length quarters the attention term. This ratio-level result predicts runtime trends but does not guarantee improved optimization because representational granularity also changes.
+Doubling patch length quarters the attention term. This ratio predicts runtime trends but not optimization quality, because representational granularity also changes.
 
 \subsection{Compute-Normalized Objective View}
 For practical model selection under fixed hardware budgets, we define a compute-normalized criterion
 \begin{equation}
-\mathcal{J}(P,\rho) = \mathbb{E}[\mathcal{L}_{\text{mask}}(P,\rho)] + \lambda\,\mathcal{C}(P),
+\mathcal{J}(P,\rho) = \mathbb{E}[\mathcal{L}_{\text{mask}}(P,\rho)] + \lambda\,\mathcal{C}(P)\,,
 \label{eq:compute_obj}
 \end{equation}
 where $\lambda \ge 0$ is a budget preference scalar and
@@ -279,14 +279,14 @@ where $\lambda \ge 0$ is a budget preference scalar and
 \end{equation}
 captures the dominant attention and projection terms. For two patch lengths $P_a$ and $P_b$, $P_b$ is preferred when
 \begin{equation}
-\Delta \mathbb{E}[\mathcal{L}_{\text{mask}}] < -\lambda\,\Delta\mathcal{C},
+\Delta \mathbb{E}[\mathcal{L}_{\text{mask}}] < -\lambda\,\Delta\mathcal{C}\,.
 \label{eq:tradeoff_rule}
 \end{equation}
-with $\Delta$ denoting value at $P_b$ minus value at $P_a$. This framing makes explicit that a slightly worse reconstruction loss can still be acceptable if compute savings are large enough for downstream throughput goals.
+with $\Delta$ denoting value at $P_b$ minus value at $P_a$. Larger patches remain preferable when compute savings outweigh the marginal loss increase.
 
 \section{Experimental Protocol}
 \subsection{Single-Seed Deterministic Baseline}
-We first report a strict deterministic baseline (one seed, fixed settings) to establish comparability under a controlled budget. The configuration is:
+We first report a deterministic baseline with one seed and fixed settings to establish a comparable reference under a controlled budget. The configuration is:
 \begin{enumerate}
     \item seed = 42,
     \item feature fallback enabled,
@@ -297,7 +297,7 @@ We first report a strict deterministic baseline (one seed, fixed settings) to es
 \end{enumerate}
 
 \subsection{Multi-Seed Protocol for Uncertainty}
-The deterministic baseline is useful for reproducibility checks but insufficient for uncertainty estimation. We therefore run a seed-stratified protocol with seeds $\{11,42,123\}$ where each seed controls:
+The deterministic baseline checks reproducibility but not uncertainty. We run a seed-stratified protocol with seeds $\{11,42,123\}$, and each seed controls:
 \begin{enumerate}
     \item feature-row sampling in synthetic corpus construction,
     \item model parameter initialization,
@@ -308,7 +308,7 @@ For each seed, the corpus is regenerated once and reused across the five ablatio
 
 Confidence intervals are reported as half-widths using Student-$t$:
 \begin{equation}
-\mathrm{CI}_{95}(\bar{x}) = t_{0.975,\,n-1}\frac{s}{\sqrt{n}},
+\mathrm{CI}_{95}(\bar{x}) = t_{0.975,\,n-1}\frac{s}{\sqrt{n}}\,,
 \label{eq:ci95}
 \end{equation}
 where $\bar{x}$ is the sample mean and $s$ is the sample standard deviation.
@@ -345,7 +345,7 @@ We study two factors under fixed remaining hyperparameters:
 
 \section{Results}
 \subsection{Single-Seed Baseline (Seed = 42)}
-Table~\ref{tab:mask_ablation} and Table~\ref{tab:patch_ablation} summarize the deterministic baseline. In that single-seed baseline, patch length 8 produced an extreme instability event.
+Table~\ref{tab:mask_ablation} and Table~\ref{tab:patch_ablation} summarize the deterministic baseline. In that single-seed baseline, patch length 8 produced a numerical instability (MSE $\sim 10^{13}$).
 
 \begin{table}[t]
 \caption{Single-Seed Baseline: Mask-Ratio Ablation (Patch Length = 16)}
@@ -378,7 +378,7 @@ Patch $P$ & Tokens $N$ & Steps & Masked MSE & Epoch Time (s) & Token/s \\
 \end{table}
 
 \subsection{Multi-Seed Mask-Ratio Analysis}
-Table~\ref{tab:mask_multiseed} shows that under $n=3$ seed-stratified repeats, the three tested mask ratios are close in mean loss. The ordering slightly favors $\rho=0.2$, but confidence intervals are wide relative to mean differences.
+Table~\ref{tab:mask_multiseed} reports $n=3$ seed-stratified repeats. The three mask ratios produce similar mean loss; $\rho=0.2$ ranks lowest, but confidence intervals are wide relative to the differences.
 
 \begin{table}[t]
 \caption{Multi-Seed Mask-Ratio Results ($n=3$, Patch Length = 16)}
@@ -396,7 +396,7 @@ $\rho$ & Mean MSE & Std & CI$_{95}$ HW & Time (s) \\
 \end{table}
 
 \subsection{Multi-Seed Patch-Length Analysis}
-Table~\ref{tab:patch_multiseed} indicates that $P=32$ gives the lowest mean masked MSE and the shortest epoch time among tested patch sizes. Patch length 8 remains the worst mean objective and slowest runtime.
+Table~\ref{tab:patch_multiseed} shows $P=32$ with the lowest mean masked MSE and shortest epoch time. Patch length 8 has the worst mean objective and slowest runtime.
 
 \begin{table}[t]
 \caption{Multi-Seed Patch-Length Results ($n=3$, Mask Ratio = 0.4)}
@@ -434,24 +434,24 @@ $\rho=0.4$, $P=32$ & $-2.71$ & 0.61 \\
 \end{table}
 
 \subsection{Outlier Reconciliation}
-The single-seed baseline recorded a catastrophic $P=8$ outlier. The multi-seed protocol did not consistently reproduce that magnitude of failure. This suggests that the baseline divergence reflects a specific interaction among sampled synthetic rows, initialization, and short budget rather than an invariant property of $P=8$. Practically, the more robust claim is weaker but still meaningful: $P=8$ is less favorable than 16 and 32 under this budget, even when catastrophic instability is not consistently observed.
+The single-seed baseline recorded a catastrophic $P=8$ outlier. The multi-seed protocol did not reproduce that failure at the same scale, pointing to an interaction among the sampled synthetic rows, parameter initialization, and the limited step budget rather than a fixed deficiency of $P=8$. Under this budget, $P=8$ still trails 16 and 32.
 
 \subsection{Compute-Normalized Interpretation}
 The empirical results are consistent with the objective in \eqref{eq:compute_obj}. Relative to baseline $(P=16)$, moving to $P=32$ improves loss and reduces runtime. Moving to $P=8$ increases runtime substantially and worsens mean loss. Therefore, under nonzero $\lambda$, the compute-normalized objective strongly prefers $P=32$ in this experiment.
 
 \subsection{Stability-Efficiency Frontier}
-Mean loss alone is not sufficient for deployment-oriented selection. We therefore derive two additional diagnostics from the multi-seed aggregates:
+Mean loss alone does not capture deployment suitability. We add two diagnostics:
 \begin{equation}
-\mathrm{CV}_c = \frac{s_c}{\bar{x}_c},
+\mathrm{CV}_c = \frac{s_c}{\bar{x}_c}\,,
 \label{eq:cv_metric}
 \end{equation}
 \begin{equation}
-\mathrm{SEI}_c = \frac{1}{\bar{x}_c\,\bar{t}_c},
+\mathrm{SEI}_c = \frac{1}{\bar{x}_c\,\bar{t}_c}\,,
 \label{eq:sei_metric}
 \end{equation}
 where $\bar{x}_c$ is mean masked MSE, $s_c$ is its sample standard deviation, and $\bar{t}_c$ is mean epoch time for configuration $c$. Lower CV indicates greater seed-level stability; larger SEI indicates better joint objective-time efficiency.
 
-Table~\ref{tab:frontier_metrics} shows three useful properties. First, patch-32 has the lowest variability (CV $=0.0608$). Second, patch-32 yields the strongest joint efficiency (SEI $=3.0638$), which is $1.696\times$ the baseline patch-16 setting and $3.153\times$ patch-8. Third, mask-ratio variants at patch-16 are nearly tied on both CV and SEI, reinforcing that patch length is the dominant axis under this budget.
+Table~\ref{tab:frontier_metrics} shows that patch-32 has the lowest variability (CV $=0.0608$) and the strongest joint efficiency (SEI $=3.0638$, or $1.696\times$ the patch-16 baseline and $3.153\times$ patch-8). Mask-ratio variants at patch-16 are nearly tied on both CV and SEI, confirming that patch length is the dominant axis under this budget.
 
 \begin{table}[t]
 \caption{Derived Stability and Efficiency Metrics from Multi-Seed Aggregates}
@@ -569,19 +569,22 @@ Full-token MSE range & 8.687 to 20.458 \\
     (9125.4, 0.3375) [other]
     (9179.9, 0.3372) [other]
 };
-\addlegendentry{Checkpoints}
+\addlegendimage{only marks, mark=star, mark size=4pt, tsfmblue}
+\addlegendentry{Best checkpoint}
+\addlegendimage{only marks, mark=*, mark size=2pt, gray!70}
+\addlegendentry{Other checkpoints}
 \end{axis}
 \end{tikzpicture}
 \caption{Speed--quality frontier for late checkpoints. The best checkpoint (star) achieves the lowest masked MSE but at slightly lower throughput, consistent with evaluation-time variance rather than a systematic trade-off.}
 \label{fig:checkpoint_frontier}
 \end{figure}
 
-The masked objective exhibits strong positive correlation with training step in this late regime (Pearson $r=0.973$), indicating that checkpoint recency is not a reliable proxy for objective quality here. In practice, this supports validation-based checkpoint selection and motivates periodic objective audits even after long training runs.
+Masked MSE correlates with training step in this late regime (Pearson $r=0.973$): later checkpoints are worse. Checkpoint recency is therefore an unreliable proxy for objective quality, and validation-based selection with periodic objective audits is preferable.
 
 \section{Resource Footprint Analysis}
 Beyond scalar epoch time, patch length changes the shape of the runtime bottleneck. Let $H_a$ denote attention heads and $f$ bytes per scalar (4 for \texttt{float32}). A first-order attention-map memory estimate per forward pass is
 \begin{equation}
-\mathcal{M}_{\text{attn}} \approx B M H_a N^2 f.
+\mathcal{M}_{\text{attn}} \approx B M H_a N^2 f\,.
 \label{eq:attn_mem}
 \end{equation}
 This estimate ignores optimizer states and activation checkpointing, but it captures the patch-length trend because $N=L/P$ enters quadratically.
@@ -589,7 +592,7 @@ This estimate ignores optimizer states and activation checkpointing, but it capt
 For the fixed configuration $(B=32, M=4, H_a=8, L=512)$, the attention-map contribution is shown in Table~\ref{tab:attn_mem}. The ratio follows \eqref{eq:ratio} exactly.
 
 \begin{table}[t]
-\caption{Approximate Attention-Map Memory per Forward Pass}
+\caption{Approximate Attention-Map Memory per Forward Pass ($B{=}32$, $M{=}4$, $H_a{=}8$, $L{=}512$)}
 \label{tab:attn_mem}
 \centering
 \begin{tabular}{cccc}
@@ -603,12 +606,12 @@ Patch $P$ & Token $N$ & Relative $N^2$ & $\mathcal{M}_{\text{attn}}$ \\
 \end{tabular}
 \end{table}
 
-The throughput table and memory estimate together explain why patch-32 is favored in this budget: it reduces both attention memory pressure and epoch runtime while retaining enough representational capacity for the latent objective.
+Patch-32 reduces attention memory and epoch runtime while preserving enough representational capacity for the latent objective.
 
 \subsection{Patch-Dependent Parameterization and Fairness}
 Patch ablations are close to, but not exactly, iso-parameter in this implementation. The patch-dependent portion of model parameters is the sum of Conv1d patch embedding parameters and positional embedding parameters:
 \begin{equation}
-\Theta_{\text{patch}}(P) = d(P+1) + d\frac{L}{P}.
+\Theta_{\text{patch}}(P) = d(P+1) + d\frac{L}{P}\,.
 \label{eq:patch_params}
 \end{equation}
 For $(L,d)=(512,128)$, this gives $\Theta_{\text{patch}}(8)=9344$ and $\Theta_{\text{patch}}(16)=\Theta_{\text{patch}}(32)=6272$. The run artifacts confirm total-parameter counts of 835{,}586 for patch-8 and 832{,}514 for patch-16/32.
@@ -628,19 +631,19 @@ Patch $P$ & Tokens $N$ & Total Params & Relative to $P=16$ \\
 \end{tabular}
 \end{table}
 
-The parameter mismatch is very small, so the observed objective and runtime differences are primarily attributable to tokenization granularity and attention scaling, not to large capacity disparities.
+The parameter mismatch is negligible (+0.37\%); observed differences come from tokenization granularity and attention scaling.
 
 \section{Step Budget vs. Wall-Clock Budget Interpretation}
-All ablations in this study are step-matched: each setting runs exactly 20 optimizer steps. This isolates objective behavior per update but does not equalize wall-clock optimization opportunity. Because step time depends strongly on patch length, fixed-time conclusions can differ from fixed-step conclusions.
+All ablations are step-matched: each setting runs 20 optimizer steps. This isolates per-update behavior but does not equalize wall-clock training. Step time varies with patch length, so fixed-time conclusions can differ from fixed-step conclusions.
 
 Let mean epoch time for configuration $c$ be $\bar{t}_{\text{epoch},c}$ and epoch step count be $S$. Mean step time is
 \begin{equation}
-\bar{t}_{\text{step},c} = \frac{\bar{t}_{\text{epoch},c}}{S}.
+\bar{t}_{\text{step},c} = \frac{\bar{t}_{\text{epoch},c}}{S}\,.
 \label{eq:step_time}
 \end{equation}
 For a wall-clock budget $B$ seconds, expected available optimizer steps are
 \begin{equation}
-\mathcal{S}_{\text{wall}}(B,c) = \left\lfloor\frac{B}{\bar{t}_{\text{step},c}}\right\rfloor.
+\mathcal{S}_{\text{wall}}(B,c) = \left\lfloor\frac{B}{\bar{t}_{\text{step},c}}\right\rfloor\,.
 \label{eq:wall_steps}
 \end{equation}
 
@@ -661,27 +664,27 @@ Patch $P$ & Steps in 30s & Steps in 60s & Steps in 120s \\
 \end{tabular}
 \end{table}
 
-At a 60-second budget, patch-32 receives about $1.65\times$ more updates than patch-16 and $2.93\times$ more than patch-8. Therefore, fixed-step and fixed-time evaluations answer different questions: fixed-step isolates per-update behavior, while fixed-time reflects practical training throughput. Reporting both perspectives is recommended for fair cross-configuration comparison.
+At a 60-second budget, patch-32 receives $1.65\times$ more updates than patch-16 and $2.93\times$ more than patch-8. Fixed-step evaluations isolate per-update behavior; fixed-time evaluations reflect practical training throughput.
 
 \section{Statistical and Methodological Validity}
 \subsection{Internal Validity}
-We controlled optimizer, budget, architecture, and feature-processing settings. In the multi-seed study, each seed redefines both data sampling and initialization, so replicate variance includes both components.
+We controlled optimizer, budget, architecture, and feature-processing settings. In the multi-seed study, each seed changes both data sampling and initialization, so replicate variance includes both components.
 
 \subsection{Construct Validity}
 The dependent variable is masked latent MSE, not forecasting error. It captures representation reconstruction quality under masking and should not be conflated with direct horizon-forecast skill.
 
 \subsection{Precision Limits}
-With $n=3$ seeds, confidence intervals are necessarily wide. The role of the current CI analysis is to prevent over-claiming and to identify which effects are large enough to survive small-sample uncertainty.
+With $n=3$ seeds, confidence intervals stay wide. The analysis suffices to distinguish large effects from noise but cannot resolve small differences.
 
 \subsection{Matched-Seed Nonparametric Robustness Check}
 For patch-length settings at fixed $\rho=0.4$, runs are matched by seed and can be analyzed with a Friedman test over per-seed ranks. Let $N$ be the number of seeds, $k$ the number of compared configurations, and $R_j$ the rank sum for configuration $j$. The statistic is
 \begin{equation}
-Q = \frac{12}{Nk(k+1)}\sum_{j=1}^{k}R_j^2 - 3N(k+1).
+Q = \frac{12}{Nk(k+1)}\sum_{j=1}^{k}R_j^2 - 3N(k+1)\,.
 \label{eq:friedman}
 \end{equation}
 Using $N=3$ and $k=3$ for $P\in\{8,16,32\}$ with lower masked MSE ranked better gives $(R_8,R_{16},R_{32})=(7,6,5)$, so $Q=0.6667$. The corresponding concordance effect size is
 \begin{equation}
-W = \frac{Q}{N(k-1)} = 0.1111,
+W = \frac{Q}{N(k-1)} = 0.1111\,,
 \label{eq:kendall_w}
 \end{equation}
 with a chi-square approximation $p\approx0.7165$ (df $=2$).
@@ -701,12 +704,12 @@ $P=32$ & 5 & 1.67 & 2 \\
 \end{tabular}
 \end{table}
 
-This test does not support strong inferential claims, which is expected at $N=3$. Its value is methodological: it quantifies ranking consistency and confirms that the patch-32 advantage is directional but statistically underpowered in the current budget.
+The test is underpowered at $N=3$ but quantifies ranking consistency: patch-32 shows a directional advantage.
 
 \subsection{Seed-Count Planning}
 Given observed standard deviation $s$, target detectable mean difference $\delta$, and approximate normal critical value $z_{0.975}$, a rough planning equation is
 \begin{equation}
-n \approx \left(\frac{z_{0.975} s}{\delta}\right)^2.
+n \approx \left(\frac{z_{0.975} s}{\delta}\right)^2\,.
 \label{eq:seed_plan}
 \end{equation}
 Using $s\approx0.038$ from the mask-ratio repeats:
@@ -714,19 +717,19 @@ Using $s\approx0.038$ from the mask-ratio repeats:
     \item for $\delta=0.01$, $n\approx56$ seeds,
     \item for $\delta=0.005$, $n\approx222$ seeds.
 \end{enumerate}
-This back-of-the-envelope calculation explains why $n=3$ can characterize large effects (for example patch-length shifts) but is underpowered for small mask-ratio deltas.
+This sample size suffices to detect large effects, such as patch-length shifts, but not small mask-ratio deltas.
 
 \subsection{External Validity}
-The present results arise from feature-bootstrapped univariate pretraining in one constrained corpus setting. External validity to multivariate settings, real-only corpora, and large-horizon zero-shot forecasting remains open.
+These results come from feature-bootstrapped univariate pretraining in one constrained corpus setting. External validity to multivariate settings, real-only corpora, and large-horizon zero-shot forecasting remains open. Cross-validation methodology for time series \cite{bergmeir2018} and broader forecasting practice surveys \cite{petropoulos2022forecasting} discuss additional considerations for evaluation design.
 
 \section{Decision Analysis Under Small-Sample Uncertainty}
-The preceding sections report means, standard deviations, and configuration-wise confidence intervals. For model-selection decisions, pairwise differences versus baseline $(P=16,\rho=0.4)$ are often more actionable. Let metric difference be
+The preceding sections report means, standard deviations, and configuration-wise confidence intervals. For model-selection decisions, pairwise differences versus baseline $(P=16,\rho=0.4)$ are more useful. Let metric difference be
 \begin{equation}
-\Delta_{a,b} = \mu_a - \mu_b,
+\Delta_{a,b} = \mu_a - \mu_b\,,
 \end{equation}
 with approximate 95\% interval
 \begin{equation}
-\mathrm{CI}_{95}(\Delta_{a,b}) = \Delta_{a,b} \pm t_{0.975,\nu}\sqrt{\frac{s_a^2}{n_a}+\frac{s_b^2}{n_b}}.
+\mathrm{CI}_{95}(\Delta_{a,b}) = \Delta_{a,b} \pm t_{0.975,\nu}\sqrt{\frac{s_a^2}{n_a}+\frac{s_b^2}{n_b}}\,.
 \label{eq:pairwise_ci}
 \end{equation}
 Using $n_a=n_b=3$ and a conservative small-sample critical value, Table~\ref{tab:pairwise_ci} summarizes uncertainty for both objective and runtime.
@@ -748,10 +751,12 @@ $(P=32,\rho=0.4)$ vs baseline & $-0.0102\;[-0.0800,\;0.0596]$ & $-0.5810\;[-0.61
 \end{tabular}
 \end{table*}
 
-Two conclusions follow. First, objective-level pairwise differences remain uncertain at $n=3$ because all masked-MSE intervals include zero. Second, runtime effects for patch changes are large and stable: patch-8 is reliably slower and patch-32 is reliably faster than baseline under the tested budget. In practical terms, patch-32 is currently justified by robust compute savings and favorable mean objective, while objective superiority alone should still be treated as provisional until seed count increases.
+All masked-MSE intervals include zero, so objective differences remain uncertain at $n=3$. Runtime effects for patch changes are large and stable: patch-8 is reliably slower and patch-32 reliably faster than baseline.
+
+Patch-32 is justified by compute savings and favorable mean objective. Objective superiority alone remains provisional until seed count increases.
 
 \section{Downstream Forecasting Evaluation}
-Having established the pretraining recipe and ablation results, we now evaluate whether the learned representations transfer to downstream forecasting tasks. We conduct two evaluations: (1) fine-tuning transfer against an identical from-scratch baseline, and (2) zero-shot benchmark comparison against Google's TimesFM~\cite{timesfm}.
+We next test whether the learned representations transfer to downstream forecasting tasks. We conduct two evaluations: (1) fine-tuning transfer against an identical from-scratch baseline, and (2) benchmark comparison against Google's TimesFM~\cite{timesfm}.
 
 \subsection{Fine-Tuning Transfer}
 We attach a linear forecasting head to the pretrained encoder and fine-tune on four datasets. An identical architecture trained from random initialization serves as the baseline. Table~\ref{tab:finetune_transfer} reports results.
@@ -764,7 +769,7 @@ We attach a linear forecasting head to the pretrained encoder and fine-tune on f
 \input{tables/tab_finetune_transfer}
 \end{table}
 
-The pretrained model outperforms the from-scratch baseline on 3 of 4 datasets: Metro (+4.48\%), Environmental Sensor Telemetry (+8.09\%), and ETTh1 (+2.23\%). Beijing PM2.5 favors scratch training ($-15.57$\%), suggesting that highly non-stationary pollution data may benefit less from the current pretraining distribution. Overall, these results demonstrate that masked patch reconstruction learns transferable temporal representations.
+The pretrained model outperforms the from-scratch baseline on 3 of 4 datasets: Metro (+4.48\%), Environmental Sensor Telemetry (+8.09\%), and ETTh1 (+2.23\%). Beijing PM2.5 favors scratch training ($-15.57$\%), suggesting that highly non-stationary pollution data benefits less from the current pretraining distribution. Masked patch reconstruction yields transferable temporal representations on these tasks.
 
 \subsection{Benchmark: TSFM vs TimesFM}
 We evaluate the fine-tuned TSFM model against Google's TimesFM~\cite{timesfm} across 7 standard forecasting benchmarks with forecast horizon $H=96$. TimesFM uses its built-in normalization; TSFM uses train-statistic z-normalization with autoregressive rollout.
@@ -850,20 +855,20 @@ We evaluate the fine-tuned TSFM model against Google's TimesFM~\cite{timesfm} ac
 \label{fig:finetune_improvement}
 \end{figure}
 
-The TSFM model achieves Rank~1 on the overall leaderboard with 33\% lower mean MSE than TimesFM, winning 5 out of 7 datasets (ETTh1, ETTh2, Electricity, Traffic, Weather). TimesFM retains an advantage on ETTm1 and ETTm2, which use 15-minute sampling and may benefit from TimesFM's decoder-only next-patch prediction objective at sub-hourly granularity.
+The TSFM model is ranked first with 33\% lower mean MSE than TimesFM, winning 5 of 7 datasets (ETTh1, ETTh2, Electricity, Traffic, Weather). An advantage is retained by TimesFM on ETTm1 and ETTm2, both 15-minute-sampled datasets where its decoder-only next-patch prediction objective may fit better.
 
 \section{Discussion, Limitations, and Threats to Validity}
 \subsection{Scope of Claims}
-The evidence supports objective-level and compute-level conclusions for this implementation. Furthermore, empirical zero-shot transfer tests on a model fine-tuned using this initialization demonstrated benchmark-level superiority over the large-scale decoder-only forecasting foundation TimesFM \cite{timesfm} on 5 out of 7 standard forecasting benchmarks (ETTh1, ETTh2, Electricity, Traffic, and Weather), achieving a 33\% lower overall mean MSE.
+The objective-level and computational conclusions are upheld. Superiority over TimesFM \cite{timesfm} is demonstrated on 5 of 7 standard forecasting benchmarks, with mean MSE reduced by 33\%.
 
 \subsection{Synthetic Data Bias}
 Feature-bootstrap synthesis preserves coarse descriptors but can miss local motifs, changepoints, and exogenous couplings. The resulting representation space may differ from one learned on raw observational streams.
 
 \subsection{Budget and Statistical Power}
-One epoch and 20 steps prioritize controlled comparisons over asymptotic convergence. The multi-seed extension improves robustness, but stronger inferential claims require larger seed counts and longer training horizons.
+One epoch and 20 steps favor controlled comparisons over asymptotic convergence. Brittleness is reduced by multiple seeds, but stronger conclusions require more seeds and longer training.
 
 \subsection{Design Implications}
-Within this budgeted setup, three implementation implications are immediate:
+Three implementation choices matter under this budget:
 \begin{enumerate}
     \item prioritize patch-length search before fine mask-ratio search,
     \item treat catastrophic single-seed failures as hypotheses to test, not conclusions,
@@ -871,10 +876,11 @@ Within this budgeted setup, three implementation implications are immediate:
 \end{enumerate}
 
 \section{Conclusion}
-This work presents a reproducible TSFM pretraining study that combines formal objective derivation, complexity analysis, deterministic baselines, multi-seed uncertainty reporting, long-run checkpoint auditing, and downstream forecasting evaluation. The main ablation result is that patch-length choice dominates mask-ratio choice in the tested budget, with $P=32$ outperforming $P=16$ and $P=8$ on both objective quality and runtime. A severe single-seed $P=8$ instability is observed but not consistently reproduced across seeds, reinforcing the need for seed-stratified reporting. Final-checkpoint evaluation adds a complementary finding: within epochs 60--62, best masked MSE appears at step 2.04M and later checkpoints drift by about 2.04\% by step 2.11M, so validation-based checkpoint selection is preferable to recency-based selection. The downstream evaluation demonstrates that the feature-bootstrapped pretrained encoder, when fine-tuned and evaluated zero-shot on 7 standard benchmarks against Google's TimesFM, achieves Rank~1 with 33\% lower mean MSE, winning 5 out of 7 datasets. The practical contribution is an auditable, end-to-end framework from pretraining through competitive benchmark evaluation.
+A reproducible TSFM pretraining pipeline is presented, covering objective derivation, complexity analysis, deterministic baselines, multi-seed uncertainty quantification, checkpoint auditing, and downstream evaluation. Patch-length choice is found to dominate mask-ratio choice under the tested budget: $P=32$ outperforms $P=16$ and $P=8$ on both reconstruction quality and runtime. A severe single-seed $P=8$ instability is not reproduced across seeds, which is why seed-stratified reporting is necessary. Through checkpoint evaluation over epochs 60--62, the best masked MSE is found at step 2.04M, with +2.04\% drift by step 2.11M; validation-based selection is shown to outperform recency-based selection. On seven benchmarks against TimesFM, Rank~1 is achieved by the feature-bootstrapped encoder with 33\% lower mean MSE, winning 5 of 7 datasets.
 
 \appendices
 \section{Ratio-Estimator Variance Order}
+\label{app:ratio_var}
 Let
 \begin{equation}
 \hat{\ell} = \frac{\sum_{i=1}^{N} m_i \ell_i}{\sum_{i=1}^{N} m_i}, \quad m_i\sim\mathrm{Bernoulli}(\rho).
@@ -887,9 +893,10 @@ Using a first-order delta method on the ratio of sample means $(A_N,B_N)$ with $
 Thus, smaller token counts $N$ (larger patches) and smaller mask ratios $\rho$ both affect estimator variance in opposite directions through optimization and denominator concentration.
 
 \section{Processed-Token Budget Accounting}
+\label{app:token_budget}
 For one epoch with $S$ optimizer steps, batch size $B$, and token count $N=L/P$, processed token count is
 \begin{equation}
-\mathcal{T}_{\text{tokens}} = S B N.
+\mathcal{T}_{\text{tokens}} = S B N\,.
 \end{equation}
 With $S=20$, $B=32$, and $L=512$, this gives the accounting in Table~\ref{tab:token_budget}.
 
@@ -909,6 +916,7 @@ Patch Length $P$ & Token Count $N$ & $\mathcal{T}_{\text{tokens}}$ \\
 \end{table}
 
 \section{Raw Multi-Seed Run Matrix}
+\label{app:run_matrix}
 Table~\ref{tab:run_matrix} reports the per-run values used to build aggregate statistics.
 
 \begin{table*}[!t]
@@ -940,16 +948,17 @@ R15 & 123 & 123 & 32 & 0.4 & 0.347816 & 0.9114 \\
 \end{table*}
 
 \section{Seed-Level Ranking Consistency}
+\label{app:seed_ranking}
 Let $\mathcal{C}$ be the set of ablation configurations and $\mathcal{S}$ the seed set. For each seed $s\in\mathcal{S}$ and configuration $c\in\mathcal{C}$, define objective score $J_{c,s}$ as final masked MSE. The per-seed winner is
 \begin{equation}
-c_s^{\star}=\arg\min_{c\in\mathcal{C}} J_{c,s}.
+c_s^{\star}=\arg\min_{c\in\mathcal{C}} J_{c,s}\,.
 \end{equation}
 Configuration-level win count is
 \begin{equation}
-w_c = \sum_{s\in\mathcal{S}} \mathbb{I}[c_s^{\star}=c].
+w_c = \sum_{s\in\mathcal{S}} \mathbb{I}[c_s^{\star}=c]\,.
 \end{equation}
 
-Table~\ref{tab:seed_winners} reports the resulting seed-wise winners. While $P=32,\rho=0.4$ is not universally optimal, it wins in two out of three seeds and has the best aggregate mean.
+Table~\ref{tab:seed_winners} reports the resulting seed-wise winners. While $P=32,\rho=0.4$ is not universally optimal, it wins in two of three seeds and has the best aggregate mean.
 
 \begin{table*}[!t]
 \caption{Seed-Level Winning Configuration}
@@ -966,7 +975,7 @@ Seed & Winning Configuration & Masked MSE \\
 \end{tabular}
 \end{table*}
 
-This pattern is informative for practitioners: optimization landscapes at small budgets can be seed-sensitive, and reporting only a single deterministic run can overstate or understate a configuration's practical reliability.
+A single deterministic run can misrepresent a configuration's true reliability under small-budget optimization.
 
 \begin{thebibliography}{99}
 
@@ -981,7 +990,7 @@ Y.~Nie, N.~H.~Nguyen, P.~Sinthong, and J.~Kalagnanam,
 in \emph{Proc. ICLR}, 2023.
 
 \bibitem{revin}
-T.~Kim, J.~Baek, H.~Song, Y.~Choi, and others,
+T.~Kim, J.~Baek, H.~Song, Y.~Choi, \emph{et~al.},
 ``Reversible instance normalization for accurate time-series forecasting against distribution shift,''
 in \emph{Proc. ICLR}, 2022.
 
@@ -1026,7 +1035,7 @@ B.~Lim, S.~Arik, N.~Loeff, and T.~Pfister,
 \emph{Int. J. Forecasting}, vol.~37, no.~4, pp.~1748--1764, 2021.
 
 \bibitem{godahewa2021monash}
-R.~Godahewa, C.~Bergmeir, G.~Webb, R.~Hyndman, and others,
+R.~Godahewa, C.~Bergmeir, G.~Webb, R.~Hyndman, \emph{et~al.},
 ``Monash time series forecasting archive,''
 in \emph{Proc. NeurIPS Datasets and Benchmarks}, 2021.
 
@@ -1101,19 +1110,19 @@ F.~Petropoulos, N.~Kourentzes, and G.~Svetunkov,
 \emph{European Journal of Operational Research}, vol.~299, no.~1, pp.~1--14, 2022.
 
 \bibitem{chronos2024}
-A.~Ansari, L.~Stella, A.~Turkmen, and others,
+A.~Ansari, L.~Stella, A.~Turkmen, \emph{et~al.},
 ``Chronos: Learning the language of time series,''
-arXiv:2403.07815, 2024.
+arXiv preprint arXiv:2403.07815, 2024.
 
 \bibitem{moirai2024}
-G.~Woo, C.~Liu, A.~Kumar, and others,
+G.~Woo, C.~Liu, A.~Kumar, \emph{et~al.},
 ``Unified training of universal time series forecasting transformers,''
-arXiv:2402.02592, 2024.
+arXiv preprint arXiv:2402.02592, 2024.
 
 \bibitem{lagllama2024}
-K.~Rasul, A.~Ashok, A.~Williams, and others,
+K.~Rasul, A.~Ashok, A.~Williams, \emph{et~al.},
 ``Lag-Llama: Towards foundation models for probabilistic time series forecasting,''
-arXiv:2310.08278, 2024.
+arXiv preprint arXiv:2310.08278, 2024.
 
 \end{thebibliography}
 

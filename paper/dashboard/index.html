@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TSFM Dashboard — Model Usage &amp; Performance</title>
+  <meta name="description" content="Usage dashboard for the Feature-Bootstrapped Masked TSFM model. Benchmark performance, checkpoint analysis, and transfer results.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+
+  <!-- Nav (N9 Edge-aligned minimal) -->
+  <nav class="nav" aria-label="Dashboard navigation">
+    <div style="display: flex; align-items: center; gap: var(--space-lg);">
+      <a href="index.html" class="nav__wordmark">TSFM<span>.</span>dash</a>
+      <a href="run.html" style="font-family: var(--font-outlier); font-size: var(--text-sm); color: var(--color-muted); text-decoration: none; transition: color var(--dur-short) var(--ease-out);" onmouseover="this.style.color='var(--color-ink)'" onmouseout="this.style.color='var(--color-muted)'">Playground</a>
+    </div>
+    <div class="nav__status" aria-label="Model status: operational">
+      <span class="nav__dot" aria-hidden="true"></span>
+      Model operational
+    </div>
+  </nav>
+
+  <main class="shell">
+
+    <!-- Stat Hero -->
+    <section class="stat-hero reveal" style="--i: 0">
+      <div class="stat-hero__figure" aria-label="33 percent lower mean MSE">
+        <span id="hero-counter">0</span><span class="unit">%</span>
+      </div>
+      <p class="stat-hero__qualifier">Lower mean MSE than TimesFM across 7 standard forecasting benchmarks.</p>
+      <p class="stat-hero__sub">Rank 1 · 5 of 7 datasets won · H=96</p>
+    </section>
+
+    <!-- KPI Grid -->
+    <section class="kpi-section reveal" style="--i: 1" aria-label="Key performance indicators">
+      <h2 class="kpi-section__title">Model at a glance</h2>
+      <div class="kpi-grid">
+
+        <div class="kpi-card">
+          <div class="kpi-card__label">Best masked MSE</div>
+          <div class="kpi-card__value">0.3304</div>
+          <div class="kpi-card__delta kpi-card__delta--pos">Step 2.04M</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__label">Total parameters</div>
+          <div class="kpi-card__value">832K</div>
+          <div class="kpi-card__delta" style="color: var(--color-neutral);">Encoder + MLP head</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__label">Training corpus</div>
+          <div class="kpi-card__value">44</div>
+          <div class="kpi-card__delta" style="color: var(--color-neutral);">Feature tables · 13,899 series</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__label">Checkpoint drift</div>
+          <div class="kpi-card__value">+2.04<span style="font-size: 0.6em; font-weight: 400; color: var(--color-muted);">%</span></div>
+          <div class="kpi-card__delta kpi-card__delta--neg">Epochs 60–62</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Benchmark: TSFM vs TimesFM -->
+    <section class="benchmark-section reveal" style="--i: 2" aria-label="Benchmark comparison">
+      <div class="benchmark-section__header">
+        <h2 class="benchmark-section__title">TSFM vs TimesFM</h2>
+        <span class="benchmark-section__badge">Forecast horizon H=96</span>
+      </div>
+
+      <div class="bar-chart" id="benchmark-chart">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="chart-legend">
+        <div class="chart-legend__item">
+          <span class="chart-legend__swatch" style="background: var(--color-accent);"></span>
+          TSFM (ours)
+        </div>
+        <div class="chart-legend__item">
+          <span class="chart-legend__swatch" style="background: var(--color-rule);"></span>
+          TimesFM
+        </div>
+      </div>
+    </section>
+
+    <!-- Checkpoint trend -->
+    <section class="checkpoint-section reveal" style="--i: 3" aria-label="Checkpoint evaluation trend">
+      <div class="benchmark-section__header">
+        <h2 class="benchmark-section__title">Checkpoint objective trajectory</h2>
+        <span class="benchmark-section__badge">15 checkpoints · Steps 2.04M–2.11M</span>
+      </div>
+      <div class="sparkline-container">
+        <canvas id="checkpoint-canvas" width="1200" height="180" aria-label="Masked MSE over 15 late checkpoints, showing upward drift"></canvas>
+        <div class="sparkline-meta">
+          <div class="sparkline-meta__item">Best <strong>0.3304</strong></div>
+          <div class="sparkline-meta__item">Final <strong>0.3372</strong></div>
+          <div class="sparkline-meta__item">Pearson r <strong>0.973</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transfer results -->
+    <section class="transfer-section reveal" style="--i: 4" aria-label="Fine-tuning transfer results">
+      <div class="benchmark-section__header">
+        <h2 class="benchmark-section__title">Fine-tuning transfer</h2>
+        <span class="benchmark-section__badge">Pretrained vs from-scratch</span>
+      </div>
+      <table class="transfer-table">
+        <thead>
+          <tr>
+            <th>Dataset</th>
+            <th>Pretrained MSE</th>
+            <th>Scratch MSE</th>
+            <th>Improvement</th>
+          </tr>
+        </thead>
+        <tbody id="transfer-body">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Model architecture & config -->
+    <section class="model-section reveal" style="--i: 5" aria-label="Model architecture details">
+      <div class="benchmark-section__header">
+        <h2 class="benchmark-section__title">Architecture</h2>
+      </div>
+      <div class="model-grid">
+
+        <div class="model-card">
+          <h3 class="model-card__title">Pretrained encoder</h3>
+          <div class="model-card__row"><span class="model-card__key">Embed dimension</span><span class="model-card__val">256</span></div>
+          <div class="model-card__row"><span class="model-card__key">Encoder layers</span><span class="model-card__val">6</span></div>
+          <div class="model-card__row"><span class="model-card__key">Attention heads</span><span class="model-card__val">8</span></div>
+          <div class="model-card__row"><span class="model-card__key">Context length</span><span class="model-card__val">512</span></div>
+          <div class="model-card__row"><span class="model-card__key">Patch length</span><span class="model-card__val">16</span></div>
+          <div class="model-card__row"><span class="model-card__key">Mask ratio</span><span class="model-card__val">0.5</span></div>
+          <div class="model-card__row"><span class="model-card__key">Trained steps</span><span class="model-card__val">2.11M</span></div>
+        </div>
+
+        <div class="model-card">
+          <h3 class="model-card__title">Finetuned config</h3>
+          <div class="model-card__row"><span class="model-card__key">Embed dimension</span><span class="model-card__val">128</span></div>
+          <div class="model-card__row"><span class="model-card__key">Encoder layers</span><span class="model-card__val">4</span></div>
+          <div class="model-card__row"><span class="model-card__key">Forecast horizon</span><span class="model-card__val">96</span></div>
+          <div class="model-card__row"><span class="model-card__key">Optimizer</span><span class="model-card__val">AdamW</span></div>
+          <div class="model-card__row"><span class="model-card__key">Learning rate</span><span class="model-card__val">1e-4</span></div>
+          <div class="model-card__row"><span class="model-card__key">Normalization</span><span class="model-card__val">RevIN</span></div>
+          <div class="model-card__row"><span class="model-card__key">Total params</span><span class="model-card__val">832,514</span></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer (Ft2 Inline single line) -->
+  <footer class="footer">
+    <span class="footer__copy">TSFM Dashboard — Feature-Bootstrapped Masked Reconstruction</span>
+    <span class="footer__build">Last checkpoint: step 2,110,000</span>
+  </footer>
+
+  <script>
+    // ── Data ──
+    const benchmarkData = [
+      { name: "ETTh1",       tsfm: 8.05,       timesfm: 10.59,      winner: "TSFM" },
+      { name: "ETTh2",       tsfm: 42.22,      timesfm: 57.15,      winner: "TSFM" },
+      { name: "ETTm1",       tsfm: 7.26,       timesfm: 5.67,       winner: "TimesFM" },
+      { name: "ETTm2",       tsfm: 42.21,      timesfm: 32.38,      winner: "TimesFM" },
+      { name: "Electricity", tsfm: 50653,       timesfm: 57811,      winner: "TSFM" },
+      { name: "Traffic",     tsfm: 4741916,     timesfm: 7129453,    winner: "TSFM" },
+      { name: "Weather",     tsfm: 20.21,      timesfm: 46.80,      winner: "TSFM" },
+    ];
+
+    const transferData = [
+      { dataset: "Metro",              pretrained: 1.0263, scratch: 1.0744, improvement: 4.48  },
+      { dataset: "Env. Sensor Telemetry", pretrained: 1.7843, scratch: 1.9414, improvement: 8.09  },
+      { dataset: "ETTh1",              pretrained: 0.0684, scratch: 0.0700, improvement: 2.23  },
+      { dataset: "Beijing PM2.5",      pretrained: 0.9337, scratch: 0.8079, improvement: -15.57 },
+    ];
+
+    const checkpointMSE = [
+      0.3304, 0.3319, 0.3321, 0.3323, 0.3334,
+      0.3332, 0.3336, 0.3343, 0.3355, 0.3350,
+      0.3366, 0.3355, 0.3360, 0.3375, 0.3372
+    ];
+
+    // ── Hero counter ──
+    function animateCounter(el, target, duration) {
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(eased * target);
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    const counterEl = document.getElementById("hero-counter");
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          animateCounter(counterEl, 33, 800);
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    observer.observe(counterEl.closest(".stat-hero"));
+
+    // ── Benchmark bars ──
+    const chartEl = document.getElementById("benchmark-chart");
+    // Use log scale for display since Traffic is 7M vs ETTm1 at 5
+    benchmarkData.forEach(d => {
+      const max = Math.max(d.tsfm, d.timesfm);
+      const tsfmPct  = (d.tsfm / max * 100).toFixed(1);
+      const tfmPct   = (d.timesfm / max * 100).toFixed(1);
+
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      row.innerHTML = `
+        <span class="bar-row__label">${d.name}</span>
+        <div class="bar-row__track">
+          <div class="bar-row__fill bar-row__fill--tsfm" style="width: ${tsfmPct}%;" title="TSFM: ${d.tsfm.toLocaleString()}"></div>
+          <div class="bar-row__fill bar-row__fill--timesfm" style="width: ${tfmPct}%;" title="TimesFM: ${d.timesfm.toLocaleString()}"></div>
+        </div>
+        <span class="bar-row__winner bar-row__winner--${d.winner === 'TSFM' ? 'tsfm' : 'timesfm'}">${d.winner}</span>
+      `;
+      chartEl.appendChild(row);
+    });
+
+    // ── Transfer table ──
+    const tbody = document.getElementById("transfer-body");
+    transferData.forEach(d => {
+      const tr = document.createElement("tr");
+      const sign = d.improvement >= 0 ? "+" : "";
+      const colorClass = d.improvement >= 0 ? "kpi-card__delta--pos" : "kpi-card__delta--neg";
+      tr.innerHTML = `
+        <td>${d.dataset}</td>
+        <td>${d.pretrained.toFixed(4)}</td>
+        <td>${d.scratch.toFixed(4)}</td>
+        <td class="${colorClass}">${sign}${d.improvement.toFixed(2)}%</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // ── Checkpoint sparkline ──
+    const canvas = document.getElementById("checkpoint-canvas");
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = canvas.offsetWidth * dpr;
+    canvas.height = 180 * dpr;
+    ctx.scale(dpr, dpr);
+
+    const W = canvas.offsetWidth;
+    const H = 180;
+    const pad = { top: 20, right: 20, bottom: 30, left: 50 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    const minV = Math.min(...checkpointMSE) - 0.001;
+    const maxV = Math.max(...checkpointMSE) + 0.001;
+
+    function xPos(i) { return pad.left + (i / (checkpointMSE.length - 1)) * plotW; }
+    function yPos(v) { return pad.top + (1 - (v - minV) / (maxV - minV)) * plotH; }
+
+    // Computed style for tokens
+    const rootStyles = getComputedStyle(document.documentElement);
+
+    // Grid lines
+    ctx.strokeStyle = rootStyles.getPropertyValue("--color-rule").trim() || "#d4d4d4";
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 5; i++) {
+      const y = pad.top + (i / 4) * plotH;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(W - pad.right, y);
+      ctx.stroke();
+      // Label
+      const val = maxV - (i / 4) * (maxV - minV);
+      ctx.fillStyle = rootStyles.getPropertyValue("--color-neutral").trim() || "#888";
+      ctx.font = "11px 'JetBrains Mono', monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(val.toFixed(4), pad.left - 6, y + 4);
+    }
+
+    // Line
+    ctx.beginPath();
+    ctx.strokeStyle = rootStyles.getPropertyValue("--color-accent").trim() || "#4466ff";
+    ctx.lineWidth = 2;
+    ctx.lineJoin = "round";
+    checkpointMSE.forEach((v, i) => {
+      if (i === 0) ctx.moveTo(xPos(i), yPos(v));
+      else ctx.lineTo(xPos(i), yPos(v));
+    });
+    ctx.stroke();
+
+    // Dots
+    checkpointMSE.forEach((v, i) => {
+      ctx.beginPath();
+      ctx.arc(xPos(i), yPos(v), i === 0 ? 5 : 3, 0, Math.PI * 2);
+      ctx.fillStyle = i === 0
+        ? (rootStyles.getPropertyValue("--color-accent").trim() || "#4466ff")
+        : (rootStyles.getPropertyValue("--color-paper-2").trim() || "#eee");
+      ctx.fill();
+      if (i !== 0) {
+        ctx.strokeStyle = rootStyles.getPropertyValue("--color-accent").trim() || "#4466ff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    });
+
+    // X-axis labels
+    ctx.fillStyle = rootStyles.getPropertyValue("--color-neutral").trim() || "#888";
+    ctx.font = "10px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    const steps = [2.04, 2.05, 2.06, 2.07, 2.08, 2.09, 2.10, 2.11];
+    steps.forEach(s => {
+      const i = Math.round((s - 2.04) / (2.11 - 2.04) * (checkpointMSE.length - 1));
+      ctx.fillText(s.toFixed(2) + "M", xPos(i), H - 6);
+    });
+  </script>
+
+</body>
+</html>

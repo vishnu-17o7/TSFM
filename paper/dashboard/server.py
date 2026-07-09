@@ -110,39 +110,48 @@ class TSFMBackend:
             self.model_info = {"checkpoint": "Simulation (Load failed)", "parameters": 802458}
 
     @torch.no_grad()
-    def forecast(self, context_data: np.ndarray) -> np.ndarray:
-        """Executes model forward pass. Input shape context_data: [512]"""
+    def forecast(self, context_data: np.ndarray, target_horizon: int = 24) -> np.ndarray:
+        """Executes model forward pass with autoregressive rollout if target_horizon > model_horizon."""
         if self.model is None:
-            # Simulated forecast if model is offline
-            return self.simulate_forecast(context_data)
-            
-        # Z-normalize context
-        mean = context_data.mean()
-        std = context_data.std()
-        safe_std = std if std >= 1e-6 else 1.0
-        normalized = (context_data - mean) / safe_std
-        
-        # Format input: [batch=1, context_length=512, features=1]
-        x = torch.from_numpy(normalized).float().unsqueeze(0).unsqueeze(-1).to(self.device)
-        
-        # Forward pass: -> [batch=1, horizon=24, features=1]
-        y_pred = self.model(x)
-        y_pred = y_pred.squeeze(0).squeeze(-1).cpu().numpy()
-        
-        # Inverse normalize prediction back to raw units
-        predictions = (y_pred * safe_std) + mean
-        return predictions
+            return self.simulate_forecast(context_data, target_horizon)
 
-    def simulate_forecast(self, context_data: np.ndarray) -> np.ndarray:
+        model_horizon = self.model_info.get("horizon", 24)
+        
+        ctx = context_data.astype(np.float32).copy()
+        predictions_raw = []
+        remaining = int(target_horizon)
+
+        while remaining > 0:
+            # Take last 512 context steps
+            window = ctx[-512:]
+            mean = window.mean()
+            std = window.std()
+            safe_std = std if std >= 1e-6 else 1.0
+            
+            normalized = (window - mean) / safe_std
+            x = torch.from_numpy(normalized).float().unsqueeze(0).unsqueeze(-1).to(self.device)
+            
+            y_pred = self.model(x).squeeze(0).squeeze(-1).cpu().numpy()
+            y_pred_raw = (y_pred * safe_std) + mean
+            
+            take = min(model_horizon, remaining)
+            chunk = y_pred_raw[:take]
+            predictions_raw.append(chunk)
+            
+            # Append predictions to raw context for the next rollout step
+            ctx = np.concatenate([ctx, chunk])
+            remaining -= take
+
+        return np.concatenate(predictions_raw)
+
+    def simulate_forecast(self, context_data: np.ndarray, target_horizon: int = 24) -> np.ndarray:
         """Fallback simulation that mimics trend and seasonality of inputs."""
-        # Simple seasonal autoregression fallback
         last_val = context_data[-1]
         recent_trend = context_data[-1] - context_data[-10] if len(context_data) > 10 else 0
         trend_step = recent_trend / 10.0
         
         forecast = []
-        for i in range(24):
-            # Maintain general trend but add noise and diurnal wave approximation
+        for i in range(target_horizon):
             wave = np.sin(i * 0.25) * 1.5
             val = last_val + (trend_step * (i + 1)) + wave + np.random.normal(0, 0.5)
             forecast.append(val)
@@ -205,7 +214,12 @@ class DashboardRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             # Determine starting slice
             context_len = 512
-            horizon = 24
+            try:
+                horizon = int(query.get("horizon", ["24"])[0])
+                horizon = max(24, min(horizon, 192))
+            except ValueError:
+                horizon = 24
+                
             max_start = len(series) - context_len - horizon
             
             if slice_offset_str == "random":
@@ -221,8 +235,8 @@ class DashboardRequestHandler(http.server.SimpleHTTPRequestHandler):
             context = series[start_idx : start_idx + context_len]
             actual = series[start_idx + context_len : start_idx + context_len + horizon]
             
-            # Run inference
-            forecast = backend.forecast(context)
+            # Run inference with target horizon
+            forecast = backend.forecast(context, target_horizon=horizon)
             
             # Calculate standard metrics
             diff = forecast - actual

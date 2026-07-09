@@ -232,6 +232,16 @@
         </select>
       </div>
 
+      <div class="control-group">
+        <label for="horizon-select">Forecast Horizon (H)</label>
+        <select id="horizon-select" class="select-input">
+          <option value="24">H = 24 (Direct Head)</option>
+          <option value="48">H = 48 (2-Step Rollout)</option>
+          <option value="96">H = 96 (4-Step Rollout)</option>
+          <option value="192">H = 192 (8-Step Rollout)</option>
+        </select>
+      </div>
+
       <button id="run-btn" class="btn-run">
         <span>Run Inference</span>
       </button>
@@ -296,6 +306,7 @@
     const runBtn = document.getElementById("run-btn");
     const datasetSelect = document.getElementById("dataset-select");
     const sliceSelect = document.getElementById("slice-select");
+    const horizonSelect = document.getElementById("horizon-select");
     const canvas = document.getElementById("playground-canvas");
     const placeholder = document.getElementById("chart-placeholder");
     const statusDot = document.getElementById("server-status-dot");
@@ -336,6 +347,7 @@
 
       const dataset = datasetSelect.value;
       const slice = sliceSelect.value;
+      const horizon = horizonSelect.value;
 
       mLatency.textContent = "Running...";
       mMSE.textContent = "...";
@@ -344,7 +356,7 @@
       if (serverAvailable) {
         try {
           const start = performance.now();
-          const res = await fetch(`/api/run?dataset=${dataset}&slice=${slice}`);
+          const res = await fetch(`/api/run?dataset=${dataset}&slice=${slice}&horizon=${horizon}`);
           const data = await res.json();
           const latency = (performance.now() - start).toFixed(1);
 
@@ -369,7 +381,7 @@
     function runSimulation() {
       // Create some beautiful mock timeseries data
       const contextLength = 512;
-      const horizon = 24;
+      const horizon = parseInt(horizonSelect.value) || 24;
       const context = [];
       let currentVal = 20 + Math.random() * 10;
       let trend = (Math.random() - 0.5) * 0.05;
